@@ -11,11 +11,7 @@ class Logger
         {
             $messageType = gettype($message);
             //Message format: [LEVEL @ TIME] | [FILE:LINE] [MESSAGE]
-            $logMessage = "[" . LogLevel::GetName($level) . " @ " . date("Y-m-d H:i:s") . "] | [" . basename(debug_backtrace()[1]['file']) . ":" . debug_backtrace()[1]['line'] . "] [" . $messageType . "] " . (
-                $messageType === 'array' || $messageType === 'object' ?
-                print_r($message, true) :
-                $message
-            );
+            $logMessage = "[" . LogLevel::GetName($level) . " @ " . date("Y-m-d H:i:s") . "] | [" . basename(debug_backtrace()[0]['file']) . ":" . debug_backtrace()[0]['line'] . "] [" . $messageType . "] " . print_r($message, true) . PHP_EOL;
             file_put_contents(Config::LOG_FILE, $logMessage, FILE_APPEND);
         }
     }
