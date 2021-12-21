@@ -28,11 +28,10 @@ if (empty($path))
 //The request was not for the root directory, so check if the path exists.
 $rootDir = Config::PATHS[$path[0]];
 $strippedPath = array_slice($path, 1);
-
 $formattedPath = $rootDir . '/' . implode('/', $strippedPath);
-Logger::Log('Request for directory contents of: ' . $formattedPath, LogLevel::DEBUG);
 if (is_dir($formattedPath))
 {
+    Logger::Log('Getting contents of directory: ' . $formattedPath, LogLevel::DEBUG);
     $response->directories = array_filter(scandir($formattedPath), fn($dir) => is_dir($formattedPath . '/' . $dir) && $dir !== '.' && $dir !== '..');
     $files = array_filter(scandir($formattedPath), fn($file) => !is_dir($formattedPath . '/' . $file));
     $filesWithDetails = array();
