@@ -1,6 +1,14 @@
 <?php
 require_once __DIR__ . '/../../_assets/logger.php';
 
+class ErrorMessages
+{
+    const INVALID_PATH = 'INVALID_PATH';
+    const NO_RESPONSE = 'NO_RESPONSE';
+    const METHOD_NOT_ALLOWED = 'METHOD_NOT_ALLOWED';
+    const DIRECT_REQUEST_NOT_ALLOWED = 'DIRECT_REQUEST_NOT_ALLOWED';
+}
+
 class RequestMethod
 {
     public const GET = 'GET';
@@ -35,20 +43,22 @@ class RequestMethod
 
 class Request
 {
-    public const DEFAULT_RESPONSE_CODE = 200;
+    public const DEFAULT_RESPONSE_CODE = 500;
 
     private static bool $initialized = false;
 
-    private static ?array $SERVER = null;
-    private static ?string $REQUEST_METHOD = null;
-    private static ?array $GET = null;
-    private static ?array $POST = null;
-    private static ?array $FILES = null;
-    private static ?array $COOKIE = null;
-    private static ?array $ENV = null;
-    private static ?array $HEADERS = null;
-    private static ?array $REQUEST = null;
-    private static ?array $SESSION = null;
+    private static ?array $URL;
+    private static ?array $URL_STRIPPED_ROOT;
+    private static ?array $SERVER;
+    private static ?string $REQUEST_METHOD;
+    private static ?array $GET;
+    private static ?array $POST;
+    private static ?array $FILES;
+    private static ?array $COOKIE;
+    private static ?array $ENV;
+    private static ?array $HEADERS;
+    private static ?array $REQUEST;
+    // private static ?array $SESSION;
 
     //This should be automatically called by PHP when the class is loaded (run at the bottom of this file).
     public static function Init(): void
@@ -56,7 +66,14 @@ class Request
         if (self::$initialized === true) { return; }
         self::$initialized = true;
 
+        $requestURI = $_SERVER['REQUEST_URI'];
+        $queryStringStartIndex = strpos($_SERVER['REQUEST_URI'], '?');
+        if ($queryStringStartIndex !== false) { $requestURI = substr($_SERVER['REQUEST_URI'], 0, $queryStringStartIndex); }
+
+        self::$URL = array_filter(explode('/', $requestURI), fn($part) => !ctype_space($part) && $part !== '');
+        self::$URL_STRIPPED_ROOT = array_filter(explode('/', str_replace(Config::SITE_PATH, '', $requestURI)), fn($part) => !ctype_space($part) && $part !== '');
         self::$SERVER = $_SERVER;
+        self::$SERVER['REQUEST_URI'] = $requestURI;
         self::$REQUEST_METHOD = RequestMethod::GetMethod(self::$SERVER['REQUEST_METHOD']);
         self::$GET = $_GET;
         self::$POST = $_POST;
@@ -65,9 +82,10 @@ class Request
         self::$ENV = $_ENV;
         self::$HEADERS = getallheaders();
         self::$REQUEST = $_REQUEST;
-        self::$SESSION = $_SESSION;
+        // self::$SESSION = $_SESSION;
+
         header('Content-Type: application/json'); //All data should/will be returned in JSON format.
-        self::SendResponse(self::DEFAULT_RESPONSE_CODE); //Set as the default response.
+        http_response_code(self::DEFAULT_RESPONSE_CODE); //Set as the default response.
     }
 
     public static function RunScriptForRequestMethod(string $baseDirectory): never
@@ -75,13 +93,15 @@ class Request
         $filePath = $baseDirectory . '/' . strtolower(self::$REQUEST_METHOD) . '.php';
         if (file_exists($filePath))
         {
-            require_once $filePath;
-            self::SendResponse(self::DEFAULT_RESPONSE_CODE); //If this point is reached (which it shouldn't) the program will return error.
+            require_once $filePath; //Should never return.
+            Logger::Log(ErrorMessages::NO_RESPONSE, LogLevel::ERROR);
+            self::SendError(self::DEFAULT_RESPONSE_CODE, ErrorMessages::NO_RESPONSE); //If this point is reached (which it shouldn't) the program will return error.
+            //5** errors cannot return data if I recall correctly.
         }
         else
         {
-            Logger::Log('Requested method not found', LogLevel::DEBUG);
-            self::SendResponse(405);
+            Logger::Log(ErrorMessages::METHOD_NOT_ALLOWED, LogLevel::DEBUG);
+            self::SendError(405, ErrorMessages::METHOD_NOT_ALLOWED);
         }
     }
 
@@ -89,9 +109,26 @@ class Request
     {
         if (self::$REQUEST_METHOD !== $requestMethod)
         {
-            Logger::Log('Requested method not allowed', LogLevel::DEBUG);
-            self::SendResponse(405);
+            Logger::Log(ErrorMessages::METHOD_NOT_ALLOWED, LogLevel::DEBUG);
+            self::SendError(405, ErrorMessages::METHOD_NOT_ALLOWED);
         }
+    }
+
+    public static function DenyIfDirectRequest(string $fileName): void
+    {
+        //This could be improved to validate the path too.
+        if (basename($fileName) === basename(self::$SERVER['SCRIPT_FILENAME']))
+        {
+            Logger::Log(ErrorMessages::DIRECT_REQUEST_NOT_ALLOWED, LogLevel::DEBUG);
+            self::SendError(405, ErrorMessages::DIRECT_REQUEST_NOT_ALLOWED);
+        }
+    }
+
+    public static function SendError(int $code, string $message): never
+    {
+        $body = new stdClass();
+        $body->error = $message;
+        self::SendResponse($code, $body);
     }
 
     public static function SendResponse(int $code, stdClass $body = null): never
@@ -109,15 +146,17 @@ class Request
         exit;
     }
 
-    public static function RequestMethod(): string { return self::$REQUEST_METHOD; }
-    public static function Get(): array { return self::$GET; }
-    public static function Post(): array { return self::$POST; }
-    public static function Files(): array { return self::$FILES; }
-    public static function Cookie(): array { return self::$COOKIE; }
-    public static function Server(): array { return self::$SERVER; }
-    public static function Env(): array { return self::$ENV; }
-    public static function Headers(): array { return self::$HEADERS; }
-    public static function Request(): array { return self::$REQUEST; }
-    public static function Session(): array { return self::$SESSION; }
+    public static function URL(): ?array { return self::$URL; }
+    public static function URLStrippedRoot(): ?array { return self::$URL_STRIPPED_ROOT; }
+    public static function RequestMethod(): ?string { return self::$REQUEST_METHOD; }
+    public static function Get(): ?array { return self::$GET; }
+    public static function Post(): ?array { return self::$POST; }
+    public static function Files(): ?array { return self::$FILES; }
+    public static function Cookie(): ?array { return self::$COOKIE; }
+    public static function Server(): ?array { return self::$SERVER; }
+    public static function Env(): ?array { return self::$ENV; }
+    public static function Headers(): ?array { return self::$HEADERS; }
+    public static function Request(): ?array { return self::$REQUEST; }
+    // public static function Session(): ?array { return self::$SESSION; }
 }
 Request::Init();

@@ -10,16 +10,15 @@ class Config
     public const DB_USER = 'sqluser';
     public const DB_PASSWORD = 'sqluser';
 
-    //This is the path that the website will be accessed from, e.g. http://localhost/<THIS_PART_OF_THE_URL>
-    public const SITE_PATH = '/files';
-
     //These are the directorties that the website will be able to access, You must supply a name for the path, e.g. 'Videos' => '/home/readie/videos'
     public const PATHS = array(
-        'TestDrive' => '/home/readie'
+        'readie' => '/home/readie'
     );
     #endregion
 
     #region OPTIONAL CONFIGURATION
+    //This is the path that the website will be accessed from, e.g. http://localhost/<THIS_PART_OF_THE_URL>
+    public const SITE_PATH = '/files';
     //This is the name that will appear in the browser's title bar.
     public const SITE_NAME = '';
 
@@ -28,18 +27,40 @@ class Config
     #endregion
 
     #region STATIC CONFIGURATION - DO NOT MODIFY
-    public const ROOT_DIR = __DIR__;
     #endregion
-}
 
-//Check that the necessary configuration variables are set.
-if (
-    ctype_space(Config::DB_HOST) ||
-    ctype_space(Config::DB_NAME) ||
-    ctype_space(Config::DB_USER) ||
-    ctype_space(Config::DB_PASSWORD) ||
-    ctype_space(Config::SITE_PATH)
-)
-{
-    throw new Exception('Missing configuration variables.', 1);
+    private static function Log(string $message)
+    {
+        if (!ctype_space(self::LOG_FILE) || file_exists(self::LOG_FILE))
+        {
+            $logMessage = "[" . LogLevel::GetName(LogLevel::ERROR) . " @ " . date("Y-m-d H:i:s") . "] | [config.php] [string] " . $message . PHP_EOL;
+            file_put_contents(self::LOG_FILE, $logMessage, FILE_APPEND);
+        }
+    }
+
+    public static function CheckConfig()
+    {
+        if (
+            ctype_space(self::DB_HOST) ||
+            ctype_space(self::DB_NAME) ||
+            ctype_space(self::DB_USER) ||
+            ctype_space(self::DB_PASSWORD)
+        )
+        {
+            self::Log('One or more of the required configuration variables are empty.');
+            throw new Exception('Missing configuration variables.', 1);
+        }
+        else if (!empty(array_filter(self::PATHS, function($value, $key)
+        {
+            return strpos($key, '/') !== false ||
+            ctype_space($key) ||
+            !is_dir($value);
+        }, ARRAY_FILTER_USE_BOTH)))
+        {
+            self::Log('One or more of the paths are invalid.');
+            throw new Exception('Invalid paths.', 1);
+        }
+    }
 }
+//Check that the necessary configuration variables are set.
+Config::CheckConfig();
