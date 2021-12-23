@@ -45,6 +45,16 @@
             "description": "The name of the site",
             "default": "Web File Manager",
             "required": false
+        },
+        "theme":
+        {
+            "accent":
+            {
+                "type": "string",
+                "description": "The accent color of the site",
+                "default": "#ff7700",
+                "required": false
+            }
         }
     },
     "log":

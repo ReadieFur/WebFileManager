@@ -1,1 +1,2 @@
 ☐ Check if a config already exists. If it does, set the default values to the existing values.
+☐ Make the database storage more advanced so that files can be shared between users and groups (currently the program is a single user login, this is to make the file sharing easier for the time being).

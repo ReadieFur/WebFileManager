@@ -7,6 +7,8 @@ if (posix_getuid() != 0)
 }
 #endregion
 
+const CONFIG_FILE_PATH = '/_assets/configuration/config.json';
+
 #region Args
 $args = array();
 for ($i = 0; $i < count($argv); $i++)
@@ -110,14 +112,45 @@ function PopulateConfig(object $config, array $template)
 }
 #endregion
 
+#region Config generation
+function ConfigGeneration()
+{
+    echo '===Config generation===' . PHP_EOL;
+    if (!file_exists(__DIR__ . '/_assets/configuration/config.template.json'))
+    {
+        echo 'The configuration template file was not found in \'_assets/configuration/config.template.json\'.' . PHP_EOL . 'Please make sure it exists and try again.' . PHP_EOL;
+        exit(1);
+    }
+    $template = json_decode(file_get_contents(__DIR__ . '/_assets/configuration/config.template.json'), true);
+    $config = PopulateConfig(new stdClass(), $template);
+    $jsonConfig = json_encode($config, JSON_PRETTY_PRINT);
+    if (!file_put_contents(__DIR__ . CONFIG_FILE_PATH, $jsonConfig))
+    {
+        echo 'Failed to write configuration file. Please create it manually and place it into \'_assets/configuration/config.json\'' . PHP_EOL;
+        echo $jsonConfig . PHP_EOL;
+    }
+    echo 'Configuration file written successfully.' . PHP_EOL;
+}
+#endregion
+
 #region Webserver configuration
 function WebserverConfiguration()
 {
     echo '===Webserver configuration===' . PHP_EOL;
 
-    $sitePath = readline('Enter the path to the site: ');
-    if ($sitePath == '' || ctype_space($sitePath)) { $sitePath = ''; }
-    else if (substr($sitePath, 0, 1) != '/') { $sitePath = '/' . $sitePath; }
+    if (!file_exists(__DIR__ . CONFIG_FILE_PATH))
+    {
+        echo 'The configuration file was not found in \'_assets/configuration/config.json\'.' . PHP_EOL . 'Please make sure it exists and try again.' . PHP_EOL;
+        exit(1);
+    }
+
+    $config = json_decode(file_get_contents(__DIR__ . CONFIG_FILE_PATH), true);
+    if (!isset($config['site']['path']))
+    {
+        echo 'The configuration file is missing the \'site.path\' key.' . PHP_EOL . 'Please make sure it exists and try again.' . PHP_EOL;
+        exit(1);
+    }
+    $sitePath = $config['site']['path'];
 
     $apiV1Path = $sitePath . '/api/v1';
     $rootLocationBlock = $sitePath == '' ? '/' : $sitePath;
@@ -132,6 +165,7 @@ function WebserverConfiguration()
         #endregion
 
         location $sitePath/_assets { deny all; }
+        location $sitePath/setup.php { deny all; }
 
         try_files \$uri \$uri/ /index.php\$query_string;
 
@@ -150,24 +184,63 @@ function WebserverConfiguration()
 }
 #endregion
 
-#region Config generation
-function ConfigGeneration()
+#region Database setup
+function DatabaseSetup()
 {
-    echo '===Config generation===' . PHP_EOL;
-    if (!file_exists(__DIR__ . '/_assets/configuration/config.template.json'))
+    echo '===Database setup===' . PHP_EOL;
+    if (!file_exists(__DIR__ . CONFIG_FILE_PATH))
     {
-        echo 'The configuration template file was not found in \'_assets/configuration/config.template.json\'.\nPlease make sure it exists and try again.' . PHP_EOL;
+        echo 'The configuration file was not found in \'_assets/configuration/config.json\'.' . PHP_EOL . 'Please make sure it exists and try again.' . PHP_EOL;
         exit(1);
     }
-    $template = json_decode(file_get_contents(__DIR__ . '/_assets/configuration/config.template.json'), true);
-    $config = PopulateConfig(new stdClass(), $template);
-    $jsonConfig = json_encode($config, JSON_PRETTY_PRINT);
-    if (!file_put_contents(__DIR__ . '/_assets/configuration/config.json', $jsonConfig))
+
+    $config = json_decode(file_get_contents(__DIR__ . CONFIG_FILE_PATH), true);
+    if (!isset($config['database']['host']) || !isset($config['database']['username']) || !isset($config['database']['password']) || !isset($config['database']['database']))
     {
-        echo 'Failed to write configuration file. Please create it manually and place it into \'_assets/configuration/config.json\'' . PHP_EOL;
-        echo $jsonConfig . PHP_EOL;
+        echo 'The configuration file is missing some required values.' . PHP_EOL . 'Please make sure it contains the following values: \'database.host\', \'database.username\', \'database.password\', \'database.database\'' . PHP_EOL;
+        exit(1);
     }
-    echo 'Configuration file written successfully.' . PHP_EOL;
+    $host = $config['database']['host'];
+    $username = $config['database']['username'];
+    $password = $config['database']['password'];
+    $database = $config['database']['database'];
+    $pdo = new PDO("mysql:host=$host;dbname=$database", $username, $password);
+
+    $tablesPath = __DIR__ . '/_assets/database/tables';
+    if (!file_exists($tablesPath) && !is_dir($tablesPath))
+    {
+        echo 'The database tables directory was not found in \'.' . $tablesPath . '\'.' . PHP_EOL . 'Please make sure it exists and try again.' . PHP_EOL;
+        exit(1);
+    }
+    $directories = array_filter(scandir($tablesPath), fn($item) => is_dir($tablesPath . '/' . $item) && $item != '.' && $item != '..');
+    $hadErrors = false;
+    //Create tables
+    foreach ($directories as $directory)
+    {
+        $files = array_filter(scandir($tablesPath . '/' . $directory), fn($item) => is_file($tablesPath . '/' . $directory . '/' . $item) && $item != '.' && $item != '..');
+        if (!in_array('table.sql', $files)) { continue; }
+        $tableSql = file_get_contents($tablesPath . '/' . $directory . '/table.sql');
+        echo 'Creating table \'' . $directory . '\' if it does not exist...' . PHP_EOL;
+        if (!$pdo->prepare($tableSql)->execute())
+        {
+            echo 'Failed to create table \'' . $directory . '\'' . PHP_EOL;
+            $hadErrors = true;
+        }
+    }
+    //Add restraints
+    foreach ($directories as $directory)
+    {
+        $files = array_filter(scandir($tablesPath . '/' . $directory), fn($item) => is_file($tablesPath . '/' . $directory . '/' . $item) && $item != '.' && $item != '..');
+        if (!in_array('restraints.sql', $files)) { continue; }
+        $restraintsSql = file_get_contents($tablesPath . '/' . $directory . '/restraints.sql');
+        echo 'Adding restraints to table \'' . $directory . '\'...' . PHP_EOL;
+        if (!$pdo->prepare($restraintsSql)->execute())
+        {
+            echo 'Failed to add restraints to table \'' . $directory . '\'' . PHP_EOL;
+            $hadErrors = true;
+        }
+    }
+    echo 'Database setup complete' . ($hadErrors ? ' with errors.' : '.') . PHP_EOL;
 }
 #endregion
 
@@ -175,15 +248,19 @@ function ConfigGeneration()
 $configureStage = isset($args['configure']) && GetTypeFromString($args['configure']) == 'string' ? strtolower($args['configure']) : 'all';
 switch ($configureStage)
 {
-    case 'webserver':
-        WebserverConfiguration();
-        break;
     case 'config':
         ConfigGeneration();
         break;
-    default: //All
+    case 'webserver':
         WebserverConfiguration();
+        break;
+    case 'database':
+        DatabaseSetup();
+        break;
+    default: //All
         ConfigGeneration();
+        WebserverConfiguration();
+        DatabaseSetup();
         break;
 }
 #endregion
