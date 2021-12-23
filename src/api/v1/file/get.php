@@ -7,14 +7,41 @@ Request::DenyIfNotRequestMethod(RequestMethod::GET);
 Request::DenyIfDirectRequest(__FILE__);
 #endregion
 
+#region Get root paths (dosen't require authentication as it's never sent to the client without authentication)
+$pathsTable = new webfilemanager_paths(
+    true,
+    Config::Config()['database']['host'],
+    Config::Config()['database']['database'],
+    Config::Config()['database']['username'],
+    Config::Config()['database']['password']
+);
+$pathsResponse = $pathsTable->Select(array());
+if ($pathsResponse === false)
+{
+    Logger::Log(
+        array(
+            $pathsTable->GetLastException(),
+            $pathsTable->GetLastSQLError()
+        ),
+        LogLevel::ERROR
+    );
+    Request::SendError(500, 'Failed to get root paths');
+}
+$paths = array();
+foreach ($pathsResponse as $path)
+{
+    $paths[$path->web_path] = $path->local_path;
+}
+#endregion
+
 #region URL checks
 $path = array_slice(Request::URLStrippedRoot(), 3);
-if (empty($path) || !array_key_exists($path[0], Config::PATHS)) { Request::SendError(400, ErrorMessages::INVALID_PATH); }
+if (empty($path) || !array_key_exists($path[0], $paths)) { Request::SendError(400, ErrorMessages::INVALID_PATH); }
 #endregion
 
 //https://github.com/kOFReadie/Cloud/blob/main/src/files/storage/index.php
 #region Path checks
-$rootDir = Config::PATHS[$path[0]];
+$rootDir = $paths[$path[0]];
 $strippedPath = array_slice($path, 1);
 $formattedPath = $rootDir . '/' . implode('/', $strippedPath);
 if (is_file($formattedPath))

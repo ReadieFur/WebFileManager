@@ -1,5 +1,5 @@
 <?php
-require_once __DIR__ . '/../../_assets/logger.php';
+require_once __DIR__ . '/../../_assets/logger/logger.php';
 
 class ErrorMessages
 {
