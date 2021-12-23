@@ -2,7 +2,7 @@
 CREATE TABLE IF NOT EXISTS `webfilemanager_shares`(
     `id` char(128) NOT NULL PRIMARY KEY,
     `uid` char(128) NOT NULL,
-    `file` varchar(256) NOT NULL,
+    `path` varchar(256) NOT NULL,
     `shareType` smallInt(6) NOT NULL DEFAULT 0,
-    `publicExpiryTime` varchar(32) NOT NULL DEFAULT '-1'
+    `expiryTime` varchar(32) NOT NULL DEFAULT '-1'
 );

@@ -1,11 +1,16 @@
 <?php
 require_once __DIR__ . '/../request.php';
 require_once __DIR__ . '/../../../_assets/configuration/config.php';
+require_once __DIR__ . '/../../../_assets/database/databaseHelper.php';
 
 #region Request checks
 Request::DenyIfNotRequestMethod(RequestMethod::GET);
 Request::DenyIfDirectRequest(__FILE__);
 #endregion
+
+#region Get root paths (doen't require authentication as it's never sent to the client without authentication)
+$rootPaths = [];
+
 
 #region URL checks
 $path = array_slice(Request::URLStrippedRoot(), 3);
