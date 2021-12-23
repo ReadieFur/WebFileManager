@@ -1,6 +1,6 @@
 <?php
 require_once __DIR__ . '/../request.php';
-require_once __DIR__ . '/../../../_assets/config.php';
+require_once __DIR__ . '/../../../_assets/configuration/config.php';
 
 #region Request checks
 Request::DenyIfNotRequestMethod(RequestMethod::GET);
@@ -19,7 +19,7 @@ $response->path = $path;
 //Check if the request is for the root directory, if so list all avaliable paths.
 if (empty($path))
 {
-    Logger::Log('Request for configured paths.', LogLevel::DEBUG);
+    // Logger::Log('Request for configured paths.', LogLevel::DEBUG);
     $response->directories = array_keys(Config::PATHS);
     $response->files = array();
     Request::SendResponse(200, $response);
@@ -31,7 +31,7 @@ $strippedPath = array_slice($path, 1);
 $formattedPath = $rootDir . '/' . implode('/', $strippedPath);
 if (is_dir($formattedPath))
 {
-    Logger::Log('Getting contents of directory: ' . $formattedPath, LogLevel::DEBUG);
+    // Logger::Log('Getting contents of directory: ' . $formattedPath, LogLevel::DEBUG);
     $response->directories = array_filter(scandir($formattedPath), fn($dir) => is_dir($formattedPath . '/' . $dir) && $dir !== '.' && $dir !== '..');
     $files = array_filter(scandir($formattedPath), fn($file) => !is_dir($formattedPath . '/' . $file));
     $filesWithDetails = array();

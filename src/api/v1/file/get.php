@@ -1,6 +1,6 @@
 <?php
 require_once __DIR__ . '/../request.php';
-require_once __DIR__ . '/../../../_assets/config.php';
+require_once __DIR__ . '/../../../_assets/configuration/config.php';
 
 #region Request checks
 Request::DenyIfNotRequestMethod(RequestMethod::GET);
@@ -19,7 +19,7 @@ $strippedPath = array_slice($path, 1);
 $formattedPath = $rootDir . '/' . implode('/', $strippedPath);
 if (is_file($formattedPath))
 {
-    Logger::Log('Getting contents of file: ' . $formattedPath, LogLevel::DEBUG);
+    // Logger::Log('Getting contents of file: ' . $formattedPath, LogLevel::DEBUG);
     $fileStream = new FileStream($formattedPath, array_key_exists('download', Request::Get()));
     $fileStream->Begin();
     // exit; //This is called from the end function which is called from the begin function above.

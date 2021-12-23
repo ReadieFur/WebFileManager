@@ -1,0 +1,67 @@
+{
+    "database":
+    {
+        "host":
+        {
+            "type": "string",
+            "description": "The hostname of the database server",
+            "default": "localhost",
+            "required": true
+        },
+        "database":
+        {
+            "type": "string",
+            "description": "The name of the database",
+            "default": "",
+            "required": true
+        },
+        "username":
+        {
+            "type": "string",
+            "description": "The username to use when connecting to the database",
+            "default": "",
+            "required": true
+        },
+        "password":
+        {
+            "type": "string",
+            "description": "The password to use when connecting to the database",
+            "default": "",
+            "required": true
+        }
+    },
+    "site":
+    {
+        "path":
+        {
+            "type": "string",
+            "description": "The path to the site",
+            "default": "/",
+            "required": false
+        },
+        "name":
+        {
+            "type": "string",
+            "description": "The name of the site",
+            "default": "Web File Manager",
+            "required": false
+        }
+    },
+    "log":
+    {
+        "path":
+        {
+            "type": "string",
+            "description": "The path to the log file",
+            "default": "/var/log/webfilemanager.log",
+            "required": false
+        },
+        "level":
+        {
+            "type": "integer",
+            "description": "The level of logging to use",
+            "default": 3,
+            "required": false
+        }
+    }
+}

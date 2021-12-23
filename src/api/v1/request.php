@@ -71,7 +71,7 @@ class Request
         if ($queryStringStartIndex !== false) { $requestURI = substr($_SERVER['REQUEST_URI'], 0, $queryStringStartIndex); }
 
         self::$URL = array_filter(explode('/', $requestURI), fn($part) => !ctype_space($part) && $part !== '');
-        self::$URL_STRIPPED_ROOT = array_filter(explode('/', str_replace(Config::SITE_PATH, '', $requestURI)), fn($part) => !ctype_space($part) && $part !== '');
+        self::$URL_STRIPPED_ROOT = array_filter(explode('/', str_replace(Config::Config()['site']['path'], '', $requestURI)), fn($part) => !ctype_space($part) && $part !== '');
         self::$SERVER = $_SERVER;
         self::$SERVER['REQUEST_URI'] = $requestURI;
         self::$REQUEST_METHOD = RequestMethod::GetMethod(self::$SERVER['REQUEST_METHOD']);

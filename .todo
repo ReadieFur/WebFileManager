@@ -1,1 +1,1 @@
-☐ YAML parser for PHP
+☐ Check if a config already exists. If it does, set the default values to the existing values.
