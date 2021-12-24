@@ -1,8 +1,9 @@
 <?php
 require_once __DIR__ . '/../request.php';
-require_once __DIR__ . '/../../account/accountHelper.php';
-require_once __DIR__ . '/../../_assets/database/tables/webfilemanager_paths/webfilemanager_paths.php';
-require_once __DIR__ . '/../../_assets/database/tables/webfilemanager_shares/webfilemanager_shares.php';
+require_once __DIR__ . '/../_helpers/accountHelper.php';
+require_once __DIR__ . '/../_helpers/shareHelper.php';
+require_once __DIR__ . '/../../../_assets/database/tables/webfilemanager_paths/webfilemanager_paths.php';
+require_once __DIR__ . '/../../../_assets/database/tables/webfilemanager_shares/webfilemanager_shares.php';
 
 #region Request checks
 Request::DenyIfNotRequestMethod(RequestMethod::POST);
@@ -14,20 +15,6 @@ if (!isset(Request::Post()['method']))
 { Request::SendError(400, ErrorMessages::INVALID_PARAMETERS); }
 #endregion
 
-function VerifyPathAlias($path)
-{
-    return gettype($path) === 'string' &&
-        preg_match_all('/^[a-zA-Z0-9_\-]+$/', $path, $matches) === 1;
-}
-
-function VerifyLocalPath($path): bool
-{
-    return gettype($path) === 'string' &&
-        preg_match_all('/^\/[a-zA-Z0-9_\-\/]+$/', $path, $matches) === 1 &&
-        file_exists($path) &&
-        !is_dir($path);
-}
-
 function AddRoot(): never
 {
     if (
@@ -38,7 +25,7 @@ function AddRoot(): never
     )
     { Request::SendError(400, ErrorMessages::INVALID_PARAMETERS); }
 
-    if (!VerifyPathAlias(Request::Post()['web_path']) || !VerifyLocalPath(Request::Post()['local_path']))
+    if (!ShareHelper::VerifyPathAlias(Request::Post()['web_path']) || !ShareHelper::VerifyLocalPath(Request::Post()['local_path'], true))
     { Request::SendError(400, ErrorMessages::INVALID_PATH); }
 
     $accountHelper = new AccountHelper();
@@ -49,7 +36,13 @@ function AddRoot(): never
     if ($accountResult === false)
     { Request::SendError(401, ErrorMessages::INVALID_ACCOUNT_DATA); }
 
-    $pathsTable = new webfilemanager_paths(true);
+    $pathsTable = new webfilemanager_paths(
+        true,
+        Config::Config()['database']['host'],
+        Config::Config()['database']['database'],
+        Config::Config()['database']['username'],
+        Config::Config()['database']['password']
+    );
     $existingPathResult = $pathsTable->Select(array(
         'web_path' => Request::Post()['web_path']
     ));
@@ -87,7 +80,7 @@ function UpdateRoot(): never
     )
     { Request::SendError(400, ErrorMessages::INVALID_PARAMETERS); }
 
-    if (!VerifyPathAlias(Request::Post()['old_web_path']) || !VerifyPathAlias(Request::Post()['new_web_path']) || !VerifyLocalPath(Request::Post()['new_local_path']))
+    if (!ShareHelper::VerifyPathAlias(Request::Post()['old_web_path']) || !ShareHelper::VerifyPathAlias(Request::Post()['new_web_path']) || !ShareHelper::VerifyLocalPath(Request::Post()['new_local_path'], true))
     { Request::SendError(400, ErrorMessages::INVALID_PATH); }
 
     $accountHelper = new AccountHelper();
@@ -98,7 +91,13 @@ function UpdateRoot(): never
     if ($accountResult === false)
     { Request::SendError(401, ErrorMessages::INVALID_ACCOUNT_DATA); }
 
-    $pathsTable = new webfilemanager_paths(true);
+    $pathsTable = new webfilemanager_paths(
+        true,
+        Config::Config()['database']['host'],
+        Config::Config()['database']['database'],
+        Config::Config()['database']['username'],
+        Config::Config()['database']['password']
+    );
     $existingPathResult = $pathsTable->Select(array(
         'web_path' => Request::Post()['old_web_path']
     ));
@@ -137,7 +136,13 @@ function DeleteRoot(): never
     if ($accountResult === false)
     { Request::SendError(401, ErrorMessages::INVALID_ACCOUNT_DATA); }
 
-    $pathsTable = new webfilemanager_paths(true);
+    $pathsTable = new webfilemanager_paths(
+        true,
+        Config::Config()['database']['host'],
+        Config::Config()['database']['database'],
+        Config::Config()['database']['username'],
+        Config::Config()['database']['password']
+    );
     $deleteResult = $pathsTable->Delete(array(
         'web_path' => Request::Post()['web_path']
     ));
@@ -153,15 +158,10 @@ function AddShare(): never
         !isset(Request::Post()['id']) ||
         !isset(Request::Post()['token']) ||
         !isset(Request::Post()['path']) ||
-        !isset(Request::Post()['share_type']) || Request::Post()['share_type'] > 1 || Request::Post()['share_type'] < 0 ||
-        !isset(Request::Post()['expiry_time']) || !ctype_digit(Request::Post()['expiry_time'])
-        // !isset(Request::Post()['expiry_time']) || Request::Post()['expiry_time'] < Time() - 60 // Allow for a minute of clock drift. (I noticed that checking if the time is in the past could result in some issues arising when updating a share, this could be fixed but I won't bother for now).
+        !isset(Request::Post()['share_type']) ||
+        !isset(Request::Post()['expiry_time'])
     )
     { Request::SendError(400, ErrorMessages::INVALID_PARAMETERS); }
-
-    $path = array_filter(explode('/', Request::Post()['path']), fn($part) => !ctype_space($part) && $part !== '');
-    if (count($path) < 2)
-    { Request::SendError(400, ErrorMessages::INVALID_PATH); }
 
     $accountHelper = new AccountHelper();
     $accountResult = $accountHelper->VerifyToken(
@@ -171,47 +171,34 @@ function AddShare(): never
     if ($accountResult === false)
     { Request::SendError(401, ErrorMessages::INVALID_ACCOUNT_DATA); }
 
-    $pathsTable = new webfilemanager_paths(true);
-    $existingPathResult = $pathsTable->Select(array(
-        'web_path' => $path[0]
-    ));
-    if (empty($existingPathResult))
-    { Request::SendError(404, ErrorMessages::INVALID_PATH); }
-
-    $locationPart = implode('/', array_slice($path, 1));
-    $localPath = $existingPathResult[0]['local_path'] . '/' . $locationPart;
-    if (!VerifyLocalPath($localPath))
-    { Request::SendError(400, ErrorMessages::INVALID_PATH); }
-
-    $sharesTable = new webfilemanager_shares(true);
-    $existingShareResult = $sharesTable->Select(array(
-        'path' => Request::Post()['path']
-    ));
-    if (count($existingShareResult) > 0)
-    { Request::SendError(409, ErrorMessages::PATH_ALREADY_EXISTS); }
-
-    $id = '';
-    do
+    $shareHelper = new ShareHelper();
+    $result = $shareHelper->AddShare(
+        Request::Post()['id'],
+        Request::Post()['path'],
+        Request::Post()['share_type'],
+        Request::Post()['expiry_time'],
+        true
+    );
+    
+    if (is_int($result))
     {
-        $id = str_replace('.', '', uniqid('', true));
-        $existingIDs = $sharesTable->Select(array('id'=>$id));
-        if ($existingIDs === false) { Request::SendError(500, ErrorMessages::DATABASE_ERROR); }
+        switch ($result)
+        {
+            case 400:
+                Request::SendError($result, ErrorMessages::INVALID_PARAMETERS);
+            case 404:
+                Request::SendError($result, ErrorMessages::INVALID_PATH);
+            case 409:
+                Request::SendError($result, ErrorMessages::PATH_ALREADY_EXISTS);
+            case 500:
+                Request::SendError($result, ErrorMessages::DATABASE_ERROR);
+            default:
+                Request::SendError($result, ErrorMessages::UNKNOWN_ERROR);
+        }
     }
-    while (count($existingIDs) > 0);
-
-    $insertResult = $sharesTable->Insert(array(
-        'id' => $id,
-        'uid' => Request::Post()['id'],
-        'pid' => $existingPathResult[0]['id'],
-        'path' => $locationPart,
-        'share_type' => Request::Post()['share_type'],
-        'expiry_time' => Request::Post()['expiry_time']
-    ));
-    if ($insertResult === false)
-    { Request::SendError(500, ErrorMessages::DATABASE_ERROR); }
 
     $response = new stdClass();
-    $response->id = $id;
+    $response->sid = $result;
     Request::SendResponse(200, $response);
 }
 
@@ -235,43 +222,31 @@ function UpdateShare(): never
     if ($accountResult === false)
     { Request::SendError(401, ErrorMessages::INVALID_ACCOUNT_DATA); }
 
-    $sharesTable = new webfilemanager_shares(true);
-    $existingShareResult = $sharesTable->Select(array(
-        'id' => Request::Post()['sid']
-    ));
-    if (empty($existingShareResult))
-    { Request::SendError(404, ErrorMessages::INVALID_PATH); }
-    else if ($existingShareResult[0]['uid'] !== Request::Post()['id'])
-    { Request::SendError(403, ErrorMessages::INVALID_ACCOUNT_DATA); }
+    $shareHelper = new ShareHelper();
+    $result = $shareHelper->UpdateShare(
+        Request::Post()['id'],
+        Request::Post()['sid'],
+        Request::Post()['path'],
+        Request::Post()['share_type'],
+        Request::Post()['expiry_time'],
+        true
+    );
 
-    $path = array_filter(explode('/', Request::Post()['path']), fn($part) => !ctype_space($part) && $part !== '');
-    if (count($path) < 2)
-    { Request::SendError(400, ErrorMessages::INVALID_PATH); }
-
-    $pathsTable = new webfilemanager_paths(true);
-    $existingPathResult = $pathsTable->Select(array(
-        'web_path' => $path[0]
-    ));
-    if (empty($existingPathResult))
-    { Request::SendError(404, ErrorMessages::INVALID_PATH); }
-
-    $locationPart = implode('/', array_slice($path, 1));
-    $localPath = $existingPathResult[0]['local_path'] . '/' . $locationPart;
-    if (!VerifyLocalPath($localPath))
-    { Request::SendError(400, ErrorMessages::INVALID_PATH); }
-
-    $updateResult = $sharesTable->Update(array(
-        'pid' => $existingPathResult[0]['id'],
-        'path' => $locationPart,
-        'share_type' => Request::Post()['share_type'],
-        'expiry_time' => Request::Post()['expiry_time']
-    ), array(
-        'id' => Request::Post()['sid']
-    ));
-    if ($updateResult === false)
-    { Request::SendError(500, ErrorMessages::DATABASE_ERROR); }
-
-    Request::SendResponse(200);
+    switch ($result)
+    {
+        case 200:
+            Request::SendResponse($result);
+        case 400:
+            Request::SendError($result, ErrorMessages::INVALID_PARAMETERS);
+        case 404:
+            Request::SendError($result, ErrorMessages::INVALID_PATH);
+        case 409:
+            Request::SendError($result, ErrorMessages::PATH_ALREADY_EXISTS);
+        case 500:
+            Request::SendError($result, ErrorMessages::DATABASE_ERROR);
+        default:
+            Request::SendError($result, ErrorMessages::UNKNOWN_ERROR);
+    }
 }
 
 function DeleteShare(): never
@@ -291,22 +266,28 @@ function DeleteShare(): never
     if ($accountResult === false)
     { Request::SendError(401, ErrorMessages::INVALID_ACCOUNT_DATA); }
 
-    $sharesTable = new webfilemanager_shares(true);
-    $existingShareResult = $sharesTable->Select(array(
-        'id' => Request::Post()['sid']
-    ));
-    if (empty($existingShareResult))
-    { Request::SendError(404, ErrorMessages::INVALID_PATH); }
-    else if ($existingShareResult[0]['uid'] !== Request::Post()['id'])
-    { Request::SendError(403, ErrorMessages::INVALID_ACCOUNT_DATA); }
+    $shareHelper = new ShareHelper();
+    $result = $shareHelper->DeleteShare(
+        Request::Post()['id'],
+        Request::Post()['sid'],
+        true
+    );
 
-    $deleteResult = $sharesTable->Delete(array(
-        'id' => Request::Post()['sid']
-    ));
-    if ($deleteResult === false)
-    { Request::SendError(500, ErrorMessages::DATABASE_ERROR); }
-
-    Request::SendResponse(200);
+    switch ($result)
+    {
+        case 200:
+            Request::SendResponse($result);
+        case 400:
+            Request::SendError($result, ErrorMessages::INVALID_PARAMETERS);
+        case 403:
+            Request::SendError($result, ErrorMessages::INVALID_ACCOUNT_DATA);
+        case 404:
+            Request::SendError($result, ErrorMessages::INVALID_PATH);
+        case 500:
+            Request::SendError($result, ErrorMessages::DATABASE_ERROR);
+        default:
+            Request::SendError($result, ErrorMessages::UNKNOWN_ERROR);
+    }
 }
 
 switch (Request::Post()['method'])
