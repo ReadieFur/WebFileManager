@@ -7,6 +7,10 @@ class ErrorMessages
     const NO_RESPONSE = 'NO_RESPONSE';
     const METHOD_NOT_ALLOWED = 'METHOD_NOT_ALLOWED';
     const DIRECT_REQUEST_NOT_ALLOWED = 'DIRECT_REQUEST_NOT_ALLOWED';
+    const INVALID_PARAMETERS = 'INVALID_PARAMETERS';
+    const INVALID_ACCOUNT_DATA = 'INVALID_ACCOUNT_DATA';
+    const PATH_ALREADY_EXISTS = 'PATH_ALREADY_EXISTS';
+    const DATABASE_ERROR = 'DATABASE_ERROR';
 }
 
 class RequestMethod
@@ -124,11 +128,18 @@ class Request
         }
     }
 
-    public static function SendError(int $code, string $message): never
+    public static function SendError(int $code, string $message = null): never
     {
-        $body = new stdClass();
-        $body->error = $message;
-        self::SendResponse($code, $body);
+        if ($message !== null)
+        {
+            $body = new stdClass();
+            $body->error = $message;
+            self::SendResponse($code, $body);
+        }
+        else
+        {
+            self::SendResponse($code);
+        }
     }
 
     public static function SendResponse(int $code, stdClass $body = null): never
@@ -160,3 +171,4 @@ class Request
     // public static function Session(): ?array { return self::$SESSION; }
 }
 Request::Init();
+Request::DenyIfDirectRequest(__FILE__);

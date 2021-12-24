@@ -102,7 +102,7 @@ abstract class BasicDatabaseHelper
         }
     }
 
-    public function Select(?array $_where): bool | array
+    public function Select(?array $_where): false | array
     {
         try
         {

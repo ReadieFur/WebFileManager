@@ -7,7 +7,7 @@ if (posix_getuid() != 0)
 }
 #endregion
 
-const CONFIG_FILE_PATH = '/_assets/configuration/config.json';
+const CONFIG_FILE_PATH = __DIR__ . '/_assets/configuration/config.json';
 
 #region Args
 $args = array();
@@ -124,11 +124,12 @@ function ConfigGeneration()
     $template = json_decode(file_get_contents(__DIR__ . '/_assets/configuration/config.template.json'), true);
     $config = PopulateConfig(new stdClass(), $template);
     $jsonConfig = json_encode($config, JSON_PRETTY_PRINT);
-    if (!file_put_contents(__DIR__ . CONFIG_FILE_PATH, $jsonConfig))
+    if (!file_put_contents(CONFIG_FILE_PATH, $jsonConfig))
     {
         echo 'Failed to write configuration file. Please create it manually and place it into \'_assets/configuration/config.json\'' . PHP_EOL;
         echo $jsonConfig . PHP_EOL;
     }
+    chown(CONFIG_FILE_PATH, 'www-data');
     echo 'Configuration file written successfully.' . PHP_EOL;
 }
 #endregion
@@ -138,13 +139,13 @@ function WebserverConfiguration()
 {
     echo '===Webserver configuration===' . PHP_EOL;
 
-    if (!file_exists(__DIR__ . CONFIG_FILE_PATH))
+    if (!file_exists(CONFIG_FILE_PATH))
     {
         echo 'The configuration file was not found in \'_assets/configuration/config.json\'.' . PHP_EOL . 'Please make sure it exists and try again.' . PHP_EOL;
         exit(1);
     }
 
-    $config = json_decode(file_get_contents(__DIR__ . CONFIG_FILE_PATH), true);
+    $config = json_decode(file_get_contents(CONFIG_FILE_PATH), true);
     if (!isset($config['site']['path']))
     {
         echo 'The configuration file is missing the \'site.path\' key.' . PHP_EOL . 'Please make sure it exists and try again.' . PHP_EOL;
@@ -188,13 +189,13 @@ function WebserverConfiguration()
 function DatabaseSetup()
 {
     echo '===Database setup===' . PHP_EOL;
-    if (!file_exists(__DIR__ . CONFIG_FILE_PATH))
+    if (!file_exists(CONFIG_FILE_PATH))
     {
         echo 'The configuration file was not found in \'_assets/configuration/config.json\'.' . PHP_EOL . 'Please make sure it exists and try again.' . PHP_EOL;
         exit(1);
     }
 
-    $config = json_decode(file_get_contents(__DIR__ . CONFIG_FILE_PATH), true);
+    $config = json_decode(file_get_contents(CONFIG_FILE_PATH), true);
     if (!isset($config['database']['host']) || !isset($config['database']['username']) || !isset($config['database']['password']) || !isset($config['database']['database']))
     {
         echo 'The configuration file is missing some required values.' . PHP_EOL . 'Please make sure it contains the following values: \'database.host\', \'database.username\', \'database.password\', \'database.database\'' . PHP_EOL;
