@@ -187,7 +187,7 @@ abstract class BasicDatabaseHelper
             else if (!$deleteAllForeign || $sql->rowCount() <= 0)
             {
                 $this->lastSQLError = null;
-                return false;
+                return true;
             }
     
             for ($i = 0; $i < $sql->rowCount(); $i++)

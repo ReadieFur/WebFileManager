@@ -1,6 +1,6 @@
 <?php
 require_once __DIR__ . '/../request.php';
-require_once __DIR__ . '/accountHelper.php';
+require_once __DIR__ . '/../_helpers/accountHelper.php';
 
 #region Request checks
 Request::DenyIfNotRequestMethod(RequestMethod::POST);

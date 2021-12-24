@@ -6,7 +6,12 @@ class Logger
 {
     public static function Log($message, int $level): void
     {
-        if (ctype_space(Config::Config()['log']['file']) || !file_exists(Config::Config()['log']['file'])) { return; }
+        if (
+            !isset(Config::Config()['log']) ||
+            !isset(Config::Config()['log']['path']) ||
+            ctype_space(Config::Config()['log']['path']) ||
+            !file_exists(Config::Config()['log']['path'])
+        ) { return; }
         $logLevel = (
             Config::Config()['log']['level'] == '' ||
             ctype_space(Config::Config()['log']['level']) ||
@@ -16,8 +21,8 @@ class Logger
         {
             $messageType = gettype($message);
             //Message format: [LEVEL @ TIME] | [FILE:LINE] [MESSAGE]
-            $logMessage = "[" . LogLevel::GetName($level) . " @ " . date("Y-m-d H:i:s") . "] | [" . basename(debug_backtrace()[0]['file']) . ":" . debug_backtrace()[0]['line'] . "] [" . $messageType . "] " . print_r($message, true) . PHP_EOL;
-            file_put_contents(Config::Config()['log']['file'], $logMessage, FILE_APPEND);
+            $logMessage = "[" . LogLevel::GetName($level) . " @ " . date("Y-m-d H:i:s") . "] | [" . basename(debug_backtrace()[0]['path']) . ":" . debug_backtrace()[0]['line'] . "] [" . $messageType . "] " . print_r($message, true) . PHP_EOL;
+            file_put_contents(Config::Config()['log']['path'], $logMessage, FILE_APPEND);
         }
     }
 }

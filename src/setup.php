@@ -130,6 +130,7 @@ function ConfigGeneration()
         echo $jsonConfig . PHP_EOL;
     }
     chown(CONFIG_FILE_PATH, 'www-data');
+    if ($config->log->path !== null) { chown($config->log->path, 'www-data'); } //Not ideal to assume the location of this data.
     echo 'Configuration file written successfully.' . PHP_EOL;
 }
 #endregion
@@ -159,6 +160,7 @@ function WebserverConfiguration()
     location $rootLocationBlock {
         #region API
         #region V1
+        location $apiV1Path/_helpers { deny all; }
         location $apiV1Path/directory { try_files \$uri \$uri/ $apiV1Path/directory/index.php?\$query_string; }
         location $apiV1Path/file { try_files \$uri \$uri/ $apiV1Path/file/index.php?\$query_string; }
         #endregion
