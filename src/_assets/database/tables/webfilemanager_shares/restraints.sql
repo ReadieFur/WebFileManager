@@ -1,1 +1,2 @@
 ALTER TABLE `webfilemanager_shares` ADD FOREIGN KEY (`uid`) REFERENCES `webfilemanager_users`(`id`);
+ALTER TABLE `webfilemanager_shares` ADD FOREIGN KEY (`pid`) REFERENCES `webfilemanager_paths`(`id`);

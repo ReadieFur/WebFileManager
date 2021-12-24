@@ -7,6 +7,7 @@ class webfilemanager_shares extends BasicDatabaseHelper
 
     public $id;
     public $uid;
+    public $pid;
     public $path;
     public $shareType;
     public $expiryTime;
