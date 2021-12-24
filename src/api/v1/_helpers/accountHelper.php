@@ -170,7 +170,7 @@ class AccountHelper
         return strlen($passwordMatch[0] ?? null) === strlen($password);
     }
 
-    private static function Crypt(bool $encrypt, string $key, string $data): false | string
+    public static function Crypt(bool $encrypt, string $key, string $data): false | string
     {
         //https://www.geeksforgeeks.org/how-to-encrypt-and-decrypt-a-php-string/
         $method = 'aes-256-cbc-hmac-sha256'; //Cipher method.

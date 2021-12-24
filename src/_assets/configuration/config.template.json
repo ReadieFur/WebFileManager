@@ -57,6 +57,46 @@
             }
         }
     },
+    "ffmpeg":
+    {
+        "binaries":
+        {
+            "ffmpeg":
+            {
+                "type": "string",
+                "description": "The path to the ffmpeg binary",
+                "default": "/usr/bin/ffmpeg",
+                "required": false
+            },
+            "ffprobe":
+            {
+                "type": "string",
+                "description": "The path to the ffprobe binary",
+                "default": "/usr/bin/ffprobe",
+                "required": false
+            }
+        },
+        "options":
+        {
+            "thumbnail":
+            {
+                "width":
+                {
+                    "type": "integer",
+                    "description": "The width of the thumbnail for videos",
+                    "default": 852,
+                    "required": false
+                },
+                "height":
+                {
+                    "type": "integer",
+                    "description": "The height of the thumbnail for videos",
+                    "default": 480,
+                    "required": false
+                }
+            }
+        }
+    },
     "log":
     {
         "path":

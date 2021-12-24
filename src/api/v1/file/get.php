@@ -1,11 +1,93 @@
 <?php
 require_once __DIR__ . '/../request.php';
 require_once __DIR__ . '/../../../_assets/configuration/config.php';
+require_once __DIR__ . '/../_helpers/accountHelper.php';
+require_once __DIR__ . '/../../../_assets/database/tables/webfilemanager_paths/webfilemanager_paths.php';
+require_once __DIR__ . '/../../../_assets/database/tables/webfilemanager_shares/webfilemanager_shares.php';
+require_once __DIR__ . '/../../../_assets/libs/vendor/autoload.php';
 
 #region Request checks
 Request::DenyIfNotRequestMethod(RequestMethod::GET);
 Request::DenyIfDirectRequest(__FILE__);
 #endregion
+
+function GetFile(array $path): never
+{
+    $formattedPath = '/' . implode('/', $path);
+    if (file_exists($formattedPath) && is_file($formattedPath))
+    {
+        // Logger::Log('Getting contents of file: ' . $formattedPath, LogLevel::DEBUG);
+        $fileStream = new FileStream($formattedPath, array_key_exists('download', Request::Get()));
+        $fileStream->Begin();
+        // exit; //This is called from the end function which is called from the begin function above.
+    }
+    else if (str_ends_with(basename($formattedPath), '.thumbnail.png'))
+    {
+        Request::SendError(501);
+        //I can reuse the encryption function here to get a random name for the file but have it still be reversible (also this encryption method produces a string which is valid for a file name).
+        $thumbnailPath = __DIR__ . '/_storage/thumbnails' . AccountHelper::Crypt(true, basename($formattedPath), $formattedPath) . '.thumbnail.png';
+        if (file_exists($thumbnailPath) && is_file($thumbnailPath))
+        {
+            $fileStream = new FileStream($thumbnailPath, array_key_exists('download', Request::Get()));
+            $fileStream->Begin();
+        }
+        else
+        {
+            $originalFile = dirname($formattedPath) . '/' . str_replace('.thumbnail.png', '', basename($formattedPath));
+            if (!file_exists($originalFile) || !is_file($originalFile)) { Request::SendError(404); }
+
+            try
+            {
+                $ffmpeg = FFMpeg\FFMpeg::create(array(
+                    'ffmpeg.binaries' => Config::Config()['ffmpeg']['binaries']['ffmpeg'],
+                    'ffprobe.binaries' => Config::Config()['ffmpeg']['binaries']['ffprobe']
+                ));
+                $video = $ffmpeg->open($originalFile);
+                $frame = $video->frame(FFMpeg\Coordinate\TimeCode::fromSeconds(1));
+                $frame->save($thumbnailPath);
+
+                //Resize the image if larger than the given dimensions.
+                $targetWidth = Config::Config()['ffmpeg']['options']['thumbnail']['width'];
+                $targetHeight = Config::Config()['ffmpeg']['options']['thumbnail']['height'];
+                list($originalWidth, $originalHeight) = getimagesize($thumbnailPath);
+                if ($originalWidth > $targetWidth || $originalHeight > $targetHeight)
+                {
+                    $ratio = $originalWidth / $originalHeight;
+                    if ($targetWidth / $targetHeight > $ratio)
+                    {
+                        $newWidth = $targetHeight * $ratio;
+                        $newHeight = $targetHeight;
+                    }
+                    else
+                    {
+                        $newHeight = $targetWidth / $ratio;
+                        $newWidth = $targetWidth;
+                    }
+
+                    if (
+                        ($src = imagecreatefromjpeg($thumbnailPath)) === false ||
+                        ($dst = imagecreatetruecolor($newWidth, $newHeight)) === false ||
+                        !imagecopyresampled($dst, $src, 0, 0, 0, 0, $newWidth, $newHeight, $originalWidth, $originalHeight) ||
+                        !imagejpeg($dst, $thumbnailPath)
+                    )
+                    { Request::SendError(500, ErrorMessages::THUMBNAL_ERROR); }
+                }
+
+                $fileStream = new FileStream($thumbnailPath, array_key_exists('download', Request::Get()));
+                $fileStream->Begin();
+            }
+            catch (Exception $e)
+            {
+                Logger::Log('Error generating thumbnail: ' . $e->getMessage(), LogLevel::ERROR);
+                Request::SendError(500, ErrorMessages::THUMBNAL_ERROR);
+            }
+        }
+    }
+    else
+    {
+        Request::SendError(400, ErrorMessages::INVALID_PATH);
+    }
+}
 
 #region Get root paths (dosen't require authentication as it's never sent to the client without authentication)
 $pathsTable = new webfilemanager_paths(
@@ -25,31 +107,94 @@ if ($pathsResponse === false)
         ),
         LogLevel::ERROR
     );
-    Request::SendError(500, 'Failed to get root paths');
+    Request::SendError(500);
 }
-$paths = array();
+$roots = array();
 foreach ($pathsResponse as $path)
 {
-    $paths[$path->web_path] = $path->local_path;
+    $roots[$path->web_path] = $path->local_path;
 }
 #endregion
 
-#region URL checks
 $path = array_slice(Request::URLStrippedRoot(), 3);
-if (empty($path) || !array_key_exists($path[0], $paths)) { Request::SendError(400, ErrorMessages::INVALID_PATH); }
-#endregion
-
-//https://github.com/kOFReadie/Cloud/blob/main/src/files/storage/index.php
-#region Path checks
-$rootDir = $paths[$path[0]];
-$strippedPath = array_slice($path, 1);
-$formattedPath = $rootDir . '/' . implode('/', $strippedPath);
-if (is_file($formattedPath))
+if (!empty($path))
 {
-    // Logger::Log('Getting contents of file: ' . $formattedPath, LogLevel::DEBUG);
-    $fileStream = new FileStream($formattedPath, array_key_exists('download', Request::Get()));
-    $fileStream->Begin();
-    // exit; //This is called from the end function which is called from the begin function above.
+    if (array_key_exists($path[0], $roots))
+    {
+        if (
+            !isset(Request::Get()['id']) ||
+            !isset(Request::Get()['token'])
+        )
+        { Request::SendError(400, ErrorMessages::INVALID_PARAMETERS); }
+
+        $accountHelper = new AccountHelper();
+        $accountResult = $accountHelper->VerifyToken(
+            Request::Get()['id'],
+            Request::Get()['token']
+        );
+        if ($accountResult === false)
+        { Request::SendError(401, ErrorMessages::INVALID_ACCOUNT_DATA); }
+
+        $searchPath = array_merge(
+            array_filter(explode('/', $roots[$path[0]]), fn($part) => !ctype_space($part) && $part !== ''),
+            array_filter(array_slice($path, 1), fn($part) => !ctype_space($part) && $part !== '')
+        );
+        GetFile($searchPath);
+    }
+    else
+    {
+        $sharesTable = new webfilemanager_shares(
+            true,
+            Config::Config()['database']['host'],
+            Config::Config()['database']['database'],
+            Config::Config()['database']['username'],
+            Config::Config()['database']['password']
+        );
+        $sharesResponse = $sharesTable->Select(array(
+            'id' => $path[0]
+        ));
+        if ($sharesResponse === false)
+        {
+            Logger::Log(
+                array(
+                    $sharesTable->GetLastException(),
+                    $sharesTable->GetLastSQLError()
+                ),
+                LogLevel::ERROR
+            );
+            Request::SendError(500);
+        }
+        else if (empty($sharesResponse))
+        { Request::SendError(404); }
+
+        $share = $sharesResponse[0];
+        $searchPath = array();
+        foreach ($pathsResponse as $dbPath)
+        {
+            if ($dbPath->id == $share->pid)
+            {
+                $searchPath = array_merge(
+                    array_filter(explode('/', $dbPath->local_path), fn($part) => !ctype_space($part) && $part !== ''),
+                    array_filter(explode('/', $share->path), fn($part) => !ctype_space($part) && $part !== ''),
+                    array_filter(array_slice($path, 1), fn($part) => !ctype_space($part) && $part !== '')
+                );
+                break;
+            }
+        }
+        switch ($share->share_type)
+        {
+            case 0:
+                //Public.
+                GetFile($searchPath);
+            case 1:
+                //Public with timeout.
+                if (time() > $share->expiry_time)
+                { Request::SendError(403); }
+                GetFile($searchPath);
+            default:
+                Request::SendError(500);
+        }
+    }
 }
 else
 {
