@@ -7,7 +7,9 @@ if (posix_getuid() != 0)
 }
 #endregion
 
-const CONFIG_FILE_PATH = __DIR__ . '/_assets/configuration/config.json';
+// $ROOT_DIR = dirname(__FILE__);
+const ROOT_DIR = __DIR__;
+const CONFIG_FILE_PATH = ROOT_DIR . '/_assets/configuration/config.json';
 
 #region Args
 $args = array();
@@ -116,12 +118,12 @@ function PopulateConfig(object $config, array $template)
 function ConfigGeneration()
 {
     echo '===Config generation===' . PHP_EOL;
-    if (!file_exists(__DIR__ . '/_assets/configuration/config.template.json'))
+    if (!file_exists(ROOT_DIR . '/_assets/configuration/config.template.json'))
     {
         echo 'The configuration template file was not found in \'_assets/configuration/config.template.json\'.' . PHP_EOL . 'Please make sure it exists and try again.' . PHP_EOL;
         exit(1);
     }
-    $template = json_decode(file_get_contents(__DIR__ . '/_assets/configuration/config.template.json'), true);
+    $template = json_decode(file_get_contents(ROOT_DIR . '/_assets/configuration/config.template.json'), true);
     $config = PopulateConfig(new stdClass(), $template);
     $jsonConfig = json_encode($config, JSON_PRETTY_PRINT);
     if (!file_put_contents(CONFIG_FILE_PATH, $jsonConfig))
@@ -168,6 +170,7 @@ function WebserverConfiguration()
         #endregion
 
         location $sitePath/_assets { deny all; }
+        location $sitePath/_storage { deny all; }
         location $sitePath/setup.php { deny all; }
 
         try_files \$uri \$uri/ /index.php\$query_string;
@@ -209,7 +212,7 @@ function DatabaseSetup()
     $database = $config['database']['database'];
     $pdo = new PDO("mysql:host=$host;dbname=$database", $username, $password);
 
-    $tablesPath = __DIR__ . '/_assets/database/tables';
+    $tablesPath = ROOT_DIR . '/_assets/database/tables';
     if (!file_exists($tablesPath) && !is_dir($tablesPath))
     {
         echo 'The database tables directory was not found in \'.' . $tablesPath . '\'.' . PHP_EOL . 'Please make sure it exists and try again.' . PHP_EOL;
@@ -247,6 +250,37 @@ function DatabaseSetup()
 }
 #endregion
 
+#region Misc setup
+function MiscSetup()
+{
+    echo '===Misc setup===' . PHP_EOL;
+    echo 'Creating \'_storage\' directory if it does not exist...' . PHP_EOL;
+    if (!file_exists(ROOT_DIR . '/_storage'))
+    {
+        mkdir(ROOT_DIR . '/_storage');
+        chown(ROOT_DIR . '/_storage', 'www-data');
+    }
+    echo 'Creating \'_storage\thumbnails\' directory if it does not exist...' . PHP_EOL;
+    if (!file_exists(ROOT_DIR . '/_storage/thumbnails'))
+    {
+        mkdir(ROOT_DIR . '/_storage/thumbnails');
+        chown(ROOT_DIR . '/_storage/thumbnails', 'www-data');
+    }
+    
+    //Get composer setup working
+    echo 'Installing composer dependencies...' . PHP_EOL;
+    $shellResult = shell_exec('cd \'' . ROOT_DIR . '/_assets/libs\' && composer install');
+    if ($shellResult === null || $shellResult === false)
+    {
+        echo 'Failed to install composer dependencies.' . PHP_EOL;
+        exit(1);
+    }
+    //Return to root directory.
+    shell_exec('cd \'' . ROOT_DIR . '\'');
+    echo 'Misc setup complete' . PHP_EOL;
+}
+#endregion
+
 #region Configure specific settings check
 $configureStage = isset($args['configure']) && GetTypeFromString($args['configure']) == 'string' ? strtolower($args['configure']) : 'all';
 switch ($configureStage)
@@ -260,10 +294,14 @@ switch ($configureStage)
     case 'database':
         DatabaseSetup();
         break;
+    case 'misc':
+        MiscSetup();
+        break;
     default: //All
         ConfigGeneration();
         WebserverConfiguration();
         DatabaseSetup();
+        MiscSetup();
         break;
 }
 #endregion
