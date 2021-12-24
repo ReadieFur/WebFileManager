@@ -23,9 +23,8 @@ function GetFile(array $path): never
     }
     else if (str_ends_with(basename($formattedPath), '.thumbnail.png'))
     {
-        Request::SendError(501);
         //I can reuse the encryption function here to get a random name for the file but have it still be reversible (also this encryption method produces a string which is valid for a file name).
-        $thumbnailPath = __DIR__ . '/_storage/thumbnails' . AccountHelper::Crypt(true, basename($formattedPath), $formattedPath) . '.thumbnail.png';
+        $thumbnailPath = __DIR__ . '/../../../_storage/thumbnails/' . str_replace('/', '_', AccountHelper::Crypt(true, basename($formattedPath), $formattedPath)) . '.thumbnail.png';
         if (file_exists($thumbnailPath) && is_file($thumbnailPath))
         {
             $fileStream = new FileStream($thumbnailPath, array_key_exists('download', Request::Get()));
@@ -36,6 +35,10 @@ function GetFile(array $path): never
             $originalFile = dirname($formattedPath) . '/' . str_replace('.thumbnail.png', '', basename($formattedPath));
             if (!file_exists($originalFile) || !is_file($originalFile)) { Request::SendError(404); }
 
+            if (explode('/', mime_content_type($originalFile))[0] !== 'video')
+            { Request::SendError(406, ErrorMessages::INVALID_FILE_TYPE); }
+
+            //Modified from: https://github.com/kOFReadie/Cloud/blob/main/src/files/files.php
             try
             {
                 $ffmpeg = FFMpeg\FFMpeg::create(array(
@@ -65,13 +68,16 @@ function GetFile(array $path): never
                     }
 
                     if (
-                        ($src = imagecreatefromjpeg($thumbnailPath)) === false ||
+                        ($src = imagecreatefrompng($thumbnailPath)) === false ||
                         ($dst = imagecreatetruecolor($newWidth, $newHeight)) === false ||
                         !imagecopyresampled($dst, $src, 0, 0, 0, 0, $newWidth, $newHeight, $originalWidth, $originalHeight) ||
-                        !imagejpeg($dst, $thumbnailPath)
+                        !imagejpeg($dst, $thumbnailPath) ||
+                        !imagedestroy($src) ||
+                        !imagedestroy($dst)
                     )
                     { Request::SendError(500, ErrorMessages::THUMBNAL_ERROR); }
                 }
+                else { rename($thumbnailPath, $thumbnailPath); }
 
                 $fileStream = new FileStream($thumbnailPath, array_key_exists('download', Request::Get()));
                 $fileStream->Begin();

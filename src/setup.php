@@ -133,6 +133,7 @@ function ConfigGeneration()
     }
     chown(CONFIG_FILE_PATH, 'www-data');
     if ($config->log->path !== null) { chown($config->log->path, 'www-data'); } //Not ideal to assume the location of this data.
+
     echo 'Configuration file written successfully.' . PHP_EOL;
 }
 #endregion
@@ -141,18 +142,19 @@ function ConfigGeneration()
 function WebserverConfiguration()
 {
     echo '===Webserver configuration===' . PHP_EOL;
+    $hadErrors = false;
 
     if (!file_exists(CONFIG_FILE_PATH))
     {
         echo 'The configuration file was not found in \'_assets/configuration/config.json\'.' . PHP_EOL . 'Please make sure it exists and try again.' . PHP_EOL;
-        exit(1);
+        $hadErrors = true;
     }
 
     $config = json_decode(file_get_contents(CONFIG_FILE_PATH), true);
     if (!isset($config['site']['path']))
     {
         echo 'The configuration file is missing the \'site.path\' key.' . PHP_EOL . 'Please make sure it exists and try again.' . PHP_EOL;
-        exit(1);
+        $hadErrors = true;
     }
     $sitePath = $config['site']['path'];
 
@@ -187,6 +189,8 @@ function WebserverConfiguration()
     echo "Please configure your web server to have the same functionality as the following NGINX configuration snippet. If you are using NGINX as your web server, you may still need to tweak this snippit to suit your needs." . PHP_EOL;
     echo $NGINXSnippit . PHP_EOL;
     echo "(Please read the message above if you have not already)" . PHP_EOL;
+
+    echo 'Webserver configuration complete' . ($hadErrors ? ' with errors.' : '.') . PHP_EOL;
 }
 #endregion
 
@@ -194,6 +198,8 @@ function WebserverConfiguration()
 function DatabaseSetup()
 {
     echo '===Database setup===' . PHP_EOL;
+    $hadErrors = false;
+
     if (!file_exists(CONFIG_FILE_PATH))
     {
         echo 'The configuration file was not found in \'_assets/configuration/config.json\'.' . PHP_EOL . 'Please make sure it exists and try again.' . PHP_EOL;
@@ -204,7 +210,7 @@ function DatabaseSetup()
     if (!isset($config['database']['host']) || !isset($config['database']['username']) || !isset($config['database']['password']) || !isset($config['database']['database']))
     {
         echo 'The configuration file is missing some required values.' . PHP_EOL . 'Please make sure it contains the following values: \'database.host\', \'database.username\', \'database.password\', \'database.database\'' . PHP_EOL;
-        exit(1);
+        $hadErrors = true;
     }
     $host = $config['database']['host'];
     $username = $config['database']['username'];
@@ -216,10 +222,9 @@ function DatabaseSetup()
     if (!file_exists($tablesPath) && !is_dir($tablesPath))
     {
         echo 'The database tables directory was not found in \'.' . $tablesPath . '\'.' . PHP_EOL . 'Please make sure it exists and try again.' . PHP_EOL;
-        exit(1);
+        $hadErrors = true;
     }
     $directories = array_filter(scandir($tablesPath), fn($item) => is_dir($tablesPath . '/' . $item) && $item != '.' && $item != '..');
-    $hadErrors = false;
     //Create tables
     foreach ($directories as $directory)
     {
@@ -246,6 +251,7 @@ function DatabaseSetup()
             $hadErrors = true;
         }
     }
+
     echo 'Database setup complete' . ($hadErrors ? ' with errors.' : '.') . PHP_EOL;
 }
 #endregion
@@ -254,17 +260,21 @@ function DatabaseSetup()
 function MiscSetup()
 {
     echo '===Misc setup===' . PHP_EOL;
+    $hadErrors = false;
+
     echo 'Creating \'_storage\' directory if it does not exist...' . PHP_EOL;
     if (!file_exists(ROOT_DIR . '/_storage'))
     {
         mkdir(ROOT_DIR . '/_storage');
         chown(ROOT_DIR . '/_storage', 'www-data');
+        chgrp(ROOT_DIR . '/_storage', 'www-data');
     }
     echo 'Creating \'_storage\thumbnails\' directory if it does not exist...' . PHP_EOL;
     if (!file_exists(ROOT_DIR . '/_storage/thumbnails'))
     {
         mkdir(ROOT_DIR . '/_storage/thumbnails');
         chown(ROOT_DIR . '/_storage/thumbnails', 'www-data');
+        chgrp(ROOT_DIR . '/_storage/thumbnails', 'www-data');
     }
     
     //Get composer setup working
@@ -273,11 +283,12 @@ function MiscSetup()
     if ($shellResult === null || $shellResult === false)
     {
         echo 'Failed to install composer dependencies.' . PHP_EOL;
-        exit(1);
+        $hadErrors = true;
     }
     //Return to root directory.
     shell_exec('cd \'' . ROOT_DIR . '\'');
-    echo 'Misc setup complete' . PHP_EOL;
+
+    echo 'Misc setup complete' . ($hadErrors ? ' with errors.' : '.') . PHP_EOL;
 }
 #endregion
 
