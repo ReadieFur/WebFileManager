@@ -169,6 +169,44 @@ class ShareHelper
         return 200;
     }
 
+    public function GetShare($path, $isDirectory): int | object
+    {
+        $explodedPath = array_values(
+            array_filter(
+                explode('/', $path),
+                fn($part) => !ctype_space($part) && $part !== ''
+            )
+        );
+        if (count($explodedPath) < 2)
+        { return 400; }
+
+        $existingPathResult = $this->pathsTable->Select(array(
+            'web_path' => $explodedPath[0]
+        ));
+        if (empty($existingPathResult))
+        { return 404; }
+
+        $locationPart = implode('/', array_slice($explodedPath, 1));
+        $localPath = $existingPathResult[0]->local_path . '/' . $locationPart;
+        if (!ShareHelper::VerifyLocalPath($localPath, $isDirectory))
+        { return 400; }
+
+        $existingShareResult = $this->sharesTable->Select(array(
+            'pid' => $existingPathResult[0]->id,
+            'AND',
+            'path' => $locationPart
+        ));
+        if ($existingShareResult === false) { return 500; }
+        else if (empty($existingShareResult)) { return 404; }
+        
+        $result = new stdClass();
+        $result->sid = $existingShareResult[0]->id;
+        $result->path = $explodedPath;
+        $result->share_type = $existingShareResult[0]->share_type;
+        $result->expiry_time = $existingShareResult[0]->expiry_time;
+        return $result;
+    }
+
     public function DeleteShare($uid, $sid): int
     {
         $existingShareResult = $this->sharesTable->Select(array(
