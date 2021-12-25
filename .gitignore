@@ -1,3 +1,6 @@
+/.vscode
 src/_assets/configuration/config.json
 src/_assets/libs/vendor
 src/_storage
+*.map
+*.js
