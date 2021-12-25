@@ -9,4 +9,5 @@ class webfilemanager_users extends BasicDatabaseHelper
     public $username;
     public $password;
     public $sessionToken;
+    public $admin;
 }

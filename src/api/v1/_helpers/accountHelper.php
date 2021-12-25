@@ -29,18 +29,28 @@ class AccountHelper
         );
     }
     
-    public function CreateAccount($username, $password): false | string
+    public function CreateAccount($id, $token, $username, $password, $admin): false | string
     {
-        if (!AccountHelper::CheckUsername($username) || !AccountHelper::CheckPassword($password)) { return false; }
+        if (
+            !AccountHelper::CheckID($id) ||
+            !AccountHelper::CheckToken($token) ||
+            !AccountHelper::CheckUsername($username) ||
+            !AccountHelper::CheckPassword($password) ||
+            !AccountHelper::CheckAdmin($admin)
+        )
+        { return false; }
+
+        $requestAccount = $this->GetAccountDetails($id, $token, $id);
+        if ($requestAccount === false || $requestAccount->admin != 1) { return false; }
 
         $existingUsers = $this->usersTable->Select(array('username'=>$username));
         if ($existingUsers === false || count($existingUsers) > 0) { return false; }
         
-        $id = '';
+        $uid = '';
         do
         {
-            $id = str_replace('.', '', uniqid('', true));
-            $existingIDs = $this->usersTable->Select(array('id'=>$id));
+            $uid = str_replace('.', '', uniqid('', true));
+            $existingIDs = $this->usersTable->Select(array('id'=>$uid));
             if ($existingIDs === false) { return false; }
         }
         while (count($existingIDs) > 0);
@@ -48,29 +58,91 @@ class AccountHelper
         $encryptedPassword = password_hash($password, PASSWORD_BCRYPT);
         if ($encryptedPassword === false || $encryptedPassword === null) { return false; }
 
-        $user = new webfilemanager_users();
-        $user->id = $id;
-        $user->username = $username;
-        $user->password = $encryptedPassword;
-
         $insertResult = $this->usersTable->Insert(array(
-            'id' => $user->id,
-            'username' => $user->username,
-            'password' => $user->password
+            'id' => $uid,
+            'username' => $username,
+            'password' => $encryptedPassword,
+            'admin' => $admin ? 1 : 0
         ));
         if ($insertResult === false) { return false; }
-        return $id;
+        return $uid;
     }
 
-    public function DeleteAccount($id, $token): bool
+    public function UpdateAccount($id, $token, $uid, $password, $admin): bool
+    {
+        if (
+            !AccountHelper::CheckID($id) ||
+            !AccountHelper::CheckToken($token) ||
+            !AccountHelper::CheckID($uid) ||
+            !AccountHelper::CheckAdmin($admin)
+        )
+        { return false; }
+
+        $requestAccount = $this->GetAccountDetails($id, $token, $id);
+        if (
+            $requestAccount === false ||
+            ($admin == 1 && $requestAccount->admin != 1)
+        ) { return false; }
+
+        $existingUsers = $this->usersTable->Select(array('id'=>$uid));
+        if ($existingUsers === false || empty($existingUsers)) { return false; }
+
+        $encryptedPassword = null;
+        if ($password != null && !AccountHelper::CheckPassword($password)) { return false; }
+        else if ($password != null)
+        {
+            $encryptedPassword = password_hash($password, PASSWORD_BCRYPT);
+            if ($encryptedPassword === false || $encryptedPassword === null) { return false; }
+        }
+
+        $updateResult = $this->usersTable->Update(array(
+            'password' => $encryptedPassword??$existingUsers[0]->password,
+            'admin' => $admin == 1 ? '1' : '0',
+            'sessionToken' => $encryptedPassword != null ? null : $existingUsers[0]->sessionToken
+        ), array('id'=>$uid));
+        if ($updateResult === false) { return false; }
+        return true;
+    }
+
+    public function DeleteAccount($id, $token, $uid): bool
+    {
+        if (
+            !AccountHelper::CheckID($id) ||
+            !AccountHelper::CheckToken($token) ||
+            !AccountHelper::CheckID($uid)
+        )
+        { return false; }
+
+        $requestAccount = $this->GetAccountDetails($id, $token, $id);
+        if ($requestAccount === false || ($id !== $uid && $requestAccount->admin != 1)) { return false; }
+
+        $deleteResult = $this->usersTable->Delete(array('id'=>$uid), true);
+        if ($deleteResult === false) { return false; }
+        return true;
+    }
+
+    public function GetAccountDetails($id, $token, $uid): false | object
+    {
+        if (!AccountHelper::CheckID($id) || !AccountHelper::CheckToken($token) || !AccountHelper::CheckID($uid)) { return false; }
+
+        if ($this->VerifyToken($id, $token) === false)
+        { return false; }
+
+        $user = $this->usersTable->Select(array('id'=>$uid));
+        if ($user === false) { return false; }
+        return $user[0];
+    }
+
+    public function GetAllAccounts($id, $token): false | array
     {
         if (!AccountHelper::CheckID($id) || !AccountHelper::CheckToken($token)) { return false; }
 
-        if ($this->VerifyToken($id, $token) === false) { return false; }
+        if ($this->VerifyToken($id, $token) === false)
+        { return false; }
 
-        $deleteResult = $this->usersTable->Delete(array('id'=>$id), true);
-        if ($deleteResult === false) { return false; }
-        return true;
+        $users = $this->usersTable->Select(array());
+        if ($users === false) { return false; }
+        return $users;
     }
 
     public function LogIn($username, $password): false | string
@@ -168,6 +240,11 @@ class AccountHelper
         if (gettype($password) !== 'string') { return false; }
         preg_match(AccountHelper::PASSWORD_REGEX, $password, $passwordMatch);
         return strlen($passwordMatch[0] ?? null) === strlen($password);
+    }
+
+    private static function CheckAdmin($admin): bool
+    {
+        return gettype($admin) === 'boolean' || ($admin == 0 || $admin == 1);
     }
 
     public static function Crypt(bool $encrypt, string $key, string $data): false | string

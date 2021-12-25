@@ -15,15 +15,21 @@ if (!isset(Request::Post()['method']))
 function CreateAccount(): never
 {
     if (
+        !isset(Request::Post()['id']) ||
+        !isset(Request::Post()['token']) ||
         !isset(Request::Post()['username']) ||
-        !isset(Request::Post()['password'])
+        !isset(Request::Post()['password']) ||
+        !isset(Request::Post()['admin'])
     )
     { Request::SendError(400, ErrorMessages::INVALID_PARAMETERS); }
 
     $accountHelper = new AccountHelper();
     $accountResult = $accountHelper->CreateAccount(
+        Request::Post()['id'],
+        Request::Post()['token'],
         Request::Post()['username'],
-        Request::Post()['password']
+        Request::Post()['password'],
+        Request::Post()['admin']
     );
     //While it isn't good to assume why the account creation failed, it's most likley due to the data not matching or an account already existing, so return a 409.
     //And yes I could easily add a function in the AccountHelper to return why the account creation failed, but I can't be arsed.
@@ -36,18 +42,45 @@ function CreateAccount(): never
     Request::SendResponse(200, $response);
 }
 
+function UpdateAccount(): never
+{
+    if (
+        !isset(Request::Post()['id']) ||
+        !isset(Request::Post()['token']) ||
+        !isset(Request::Post()['uid']) ||
+        // !isset(Request::Post()['password']) ||
+        !isset(Request::Post()['admin'])
+    )
+    { Request::SendError(400, ErrorMessages::INVALID_PARAMETERS); }
+
+    $accountHelper = new AccountHelper();
+    $accountResult = $accountHelper->UpdateAccount(
+        Request::Post()['id'],
+        Request::Post()['token'],
+        Request::Post()['uid'],
+        Request::Post()['password']??null,
+        Request::Post()['admin']
+    );
+    if ($accountResult === false)
+    { Request::SendError(409, ErrorMessages::INVALID_ACCOUNT_DATA); }
+
+    Request::SendResponse(200);
+}
+
 function DeleteAccount(): never
 {
     if (
         !isset(Request::Post()['id']) ||
-        !isset(Request::Post()['token'])
+        !isset(Request::Post()['token']) ||
+        !isset(Request::Post()['uid'])
     )
     { Request::SendError(400, ErrorMessages::INVALID_PARAMETERS); }
     
     $accountHelper = new AccountHelper();
     $accountResult = $accountHelper->DeleteAccount(
         Request::Post()['id'],
-        Request::Post()['token']
+        Request::Post()['token'],
+        Request::Post()['uid']
     );
     if ($accountResult === false)
     { Request::SendError(401, ErrorMessages::INVALID_ACCOUNT_DATA); }
@@ -118,6 +151,8 @@ switch (Request::Post()['method'])
 {
     case 'create_account':
         CreateAccount();
+    case 'update_account':
+        UpdateAccount();
     case 'delete_account':
         DeleteAccount();
     case 'log_in':

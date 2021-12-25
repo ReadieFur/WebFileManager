@@ -251,6 +251,19 @@ function DatabaseSetup()
             $hadErrors = true;
         }
     }
+    //Populate tables
+    foreach ($directories as $directory)
+    {
+        $files = array_filter(scandir($tablesPath . '/' . $directory), fn($item) => is_file($tablesPath . '/' . $directory . '/' . $item) && $item != '.' && $item != '..');
+        if (!in_array('populate.sql', $files)) { continue; }
+        $populateSql = file_get_contents($tablesPath . '/' . $directory . '/populate.sql');
+        echo 'Populating table \'' . $directory . '\'...' . PHP_EOL;
+        if (!$pdo->prepare($populateSql)->execute())
+        {
+            echo 'Failed to populate table \'' . $directory . '\'' . PHP_EOL;
+            $hadErrors = true;
+        }
+    }
 
     echo 'Database setup complete' . ($hadErrors ? ' with errors.' : '.') . PHP_EOL;
 }
