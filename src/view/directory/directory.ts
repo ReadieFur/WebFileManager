@@ -13,6 +13,7 @@ class Directory
     {
         new Main();
 
+        this.firstLoad = true;
         this.elements =
         {
             directoryListing: Main.GetElement("#directoryListing")    
@@ -22,7 +23,6 @@ class Directory
         //Navigation bar highlight override.
         Main.GetElement<HTMLAnchorElement>(`.navigationContainer a[href='${Main.WEB_ROOT}/view/directory/']`).classList.add("accent");
 
-        this.firstLoad = true;
         //Listen for page navigation.
         window.addEventListener("popstate", (e) => { this.OnWindowPopState(window.location.pathname); });
         this.OnWindowPopState(window.location.pathname);
@@ -46,6 +46,7 @@ class Directory
 
         //Update directory and URL.
         this.directory = directoryResponse.path;
+        document.title = `${directoryResponse.path[directoryResponse.path.length - 1]??"Directory"} | ${document.title.split("|").at(-1)}`;
         //Dont push to history if it is the first load or if we are coming from popstate.
         if (!this.firstLoad && !fromPopState)
         {
@@ -56,34 +57,34 @@ class Directory
         //Clear the directory listing.
         this.elements.directoryListing.innerHTML = "";
 
+        if (directoryResponse.path.length > 0)
+        {
+            //Add the parent directory link.
+            const row = this.CreateDirectoryItem(false, "..", true);
+            row.addEventListener("click", () => { this.LoadDirectory(directoryResponse.path.slice(0, -1).join("/"), false); });
+            this.elements.directoryListing.appendChild(row);
+        }
+
         //Add the directories first.
         for (const directory of directoryResponse.directories)
         {
-            const row = this.CreateDirectoryItem(directory, true);
+            const row = this.CreateDirectoryItem(!directoryResponse.sharedPath, directory, true);
             this.elements.directoryListing.appendChild(row);
         }
 
         //Add the files.
         for (const file of directoryResponse.files)
         {
-            const row = this.CreateDirectoryItem(`${file.name}${file.extension ? `.${file.extension}` : ''}`, false, file);
+            const row = this.CreateDirectoryItem(!directoryResponse.sharedPath, `${file.name}${file.extension ? `.${file.extension}` : ''}`, false, file);
             this.elements.directoryListing.appendChild(row);
         }
     }
 
     //Thanks copilot for reading my html structure to generate most of this code :) (nice time save).
-    private CreateDirectoryItem(displayName: string, isDirectory: boolean, file?: IFile): HTMLTableRowElement
+    private CreateDirectoryItem(optionsEnabled: boolean, displayName: string, isDirectory: boolean, file?: IFile): HTMLTableRowElement
     {
         const row = document.createElement("tr");
         row.classList.add("listItem");
-
-        if (isDirectory)
-        {
-            row.onclick = () =>
-            {
-                this.LoadDirectory(this.directory.concat(displayName).join("/"), false);
-            }
-        }
 
         //#region Name column
         const nameColumn = document.createElement("td");
@@ -153,17 +154,34 @@ class Directory
         //#endregion
 
         //#region Options column
+        
         const optionsColumn = document.createElement("td");
         optionsColumn.classList.add("optionsColumn");
 
-        const button = document.createElement("button");
-        button.innerText = "Sharing";
-        // button.onclick = () => { this.ShowSharingDialog(file!.path); };
+        var button: HTMLButtonElement;
+        if (optionsEnabled)
+        {
+            button = document.createElement("button");
+            button.innerText = "Sharing";
+            // button.onclick = () => { this.ShowSharingDialog(file!.path); };
 
-        optionsColumn.appendChild(button);
-
+            optionsColumn.appendChild(button);
+        }
+        
         row.appendChild(optionsColumn);
         //#endregion
+
+        if (isDirectory)
+        {
+            row.onclick = (e) =>
+            {
+                //Make sure the user is not clicking on the share button.
+                if (e.target !== button)
+                {
+                    this.LoadDirectory(this.directory.concat(displayName).join("/"), false);
+                }
+            }
+        }
 
         return row;
     }
@@ -185,9 +203,9 @@ class Directory
             return error;
         });
 
-        return (directoryResponse as IXHRReject<IServerErrorResponse>).error !== undefined ?
-            (directoryResponse as IXHRReject<IServerErrorResponse>).error :
-            (directoryResponse as IXHRResolve<IDirectoryResponse>).response;
+        return (directoryResponse.response as IServerErrorResponse).error !== undefined ?
+            (directoryResponse.response as IServerErrorResponse).error :
+            (directoryResponse.response as IDirectoryResponse);
     }
 
     private static FormatUnix(unixTime: number): string
@@ -219,6 +237,7 @@ new Directory();
 
 interface IDirectoryResponse
 {
+    sharedPath: boolean;
     path: string[];
     directories: string[];
     files: IFile[];

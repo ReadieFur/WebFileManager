@@ -10,9 +10,10 @@ Request::DenyIfNotRequestMethod(RequestMethod::GET);
 Request::DenyIfDirectRequest(__FILE__);
 #endregion
 
-function GetDirectory(array $webPath, array $roots, array $path): never
+function GetDirectory(array $webPath, array $roots, array $path, bool $sharedPath): never
 {
     $response = new stdClass();
+    $response->sharedPath = $sharedPath;
     $response->path = $webPath;
 
     #region Path checks
@@ -104,7 +105,7 @@ if (!empty($path))
             array_filter(explode('/', $roots[$path[0]]), fn($part) => !ctype_space($part) && $part !== ''),
             array_filter(array_slice($path, 1), fn($part) => !ctype_space($part) && $part !== '')
         );
-        GetDirectory($path, $roots, $searchPath);
+        GetDirectory($path, $roots, $searchPath, false);
     }
     else
     {
@@ -150,12 +151,12 @@ if (!empty($path))
         {
             case 0:
                 //Public.
-                GetDirectory($path, $roots, $searchPath);
+                GetDirectory($path, $roots, $searchPath, true);
             case 1:
                 //Public with timeout.
                 if (time() > $share->expiry_time)
                 { Request::SendError(403); }
-                GetDirectory($path, $roots, $searchPath);
+                GetDirectory($path, $roots, $searchPath, true);
             default:
                 Request::SendError(500);
         }
@@ -177,5 +178,5 @@ else
     if ($accountResult === false)
     { Request::SendError(401, ErrorMessages::INVALID_ACCOUNT_DATA); }
 
-    GetDirectory(array(), $roots, array());
+    GetDirectory(array(), $roots, array(), false);
 }
