@@ -171,6 +171,11 @@ function WebserverConfiguration()
         location $sitePath/api { try_files \$uri \$uri/ =404; }
         #endregion
 
+        #region UI
+        location $sitePath/view/directory { try_files \$uri \$uri/ $sitePath/view/directory/index.php?\$query_string; }
+        location $sitePath/view/file { try_files \$uri \$uri/ $sitePath/view/file/index.php?\$query_string; }
+        #endregion
+
         #region Misc
         location $sitePath/_assets { deny all; }
         location $sitePath/_storage { deny all; }

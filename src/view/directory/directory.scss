@@ -1,0 +1,110 @@
+//Modified from: https://github.com/kOFReadie/Cloud/blob/main/src/files/index.scss
+.directoryListingContainer
+{
+    width: 100%;
+    padding-top: 20px;
+    border-spacing: 0;
+
+    th
+    {
+        padding: 0px 10px 15px 10px;
+        text-align: left;
+        font-weight: bold;
+        border-bottom: 2px solid rgba(var(--foregroundColour), 1);
+    }
+
+    td
+    {
+        padding-left: 10px;
+        
+        p
+        {
+            font-weight: normal;
+        }
+    }
+
+    .listItem
+    {
+        $listItemIntitialHeight: 50px;
+        min-height: $listItemIntitialHeight;
+        max-height: $listItemIntitialHeight;
+        height: $listItemIntitialHeight;
+        cursor: pointer;
+        user-select: none;
+        border-bottom: 1px solid rgba(var(--foregroundColour), 1);
+        &:hover
+        {
+            background-color: rgba(var(--backgroundAltColour), 1);
+        }
+    }
+
+    //Split into 10 segments
+    $segment: 100/10;
+    //This isnt quite right but it should do.
+    .nameColumn
+    {
+        text-align: left;
+        font-weight: bold;
+        //Fix this.
+        width: ($segment*5)+0%;
+
+        &:not(th)
+        {
+            > input
+            {
+                font-weight: bold;
+                font-size: 1.32rem;
+            }
+        }
+
+        td:first-of-type
+        {
+            padding-left: 0px;
+        }
+    }
+
+    .typeColumn
+    {
+        > input
+        {
+            //TMP
+            pointer-events: none;
+        }
+    }
+
+    .typeColumn, .dateColumn, .sizeColumn
+    {
+        width: ($segment*1.25)+0%;
+    }
+
+    .typeColumn, .dateColumn, .sizeColumn, .optionsColumn
+    {
+        text-align: left;
+        //width: (100/10)+0%;
+
+        &:not(th)
+        {
+            font-weight: normal;
+            // text-align: right;
+        }
+    }
+
+    .optionsColumn
+    {
+        //text-align: right;
+        //width: ($segment*1.25)+0%;
+        button
+        {
+            font-weight: normal;
+        }
+        
+        .red
+        {
+            &:hover
+            {
+                background-color: red;
+                color: white;
+            }
+        }
+    }
+}
