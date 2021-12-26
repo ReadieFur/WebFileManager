@@ -10,7 +10,7 @@ class AccountHelper
 {
     //Based on the 13 month calendar, value is in seconds.
     //..., Months, days, hours, minutes, seconds.
-    private const SESSION_TIMEOUT = 7257600; //Three months: 3 * 28 * 24 * 60 * 60.
+    private const SESSION_TIMEOUT = 3 * 28 * 24 * 60 * 60; //3 months.
     //https://stackoverflow.com/questions/12018245/regular-expression-to-validate-username/12019115.
     private const USERNAME_REGEX = '/(?=.{4,20}$)(?![_.])(?!.*[_.]{2})[a-zA-Z0-9._]+(?<![_.])/m';
     //https://stackoverflow.com/questions/19605150/regex-for-password-must-contain-at-least-eight-characters-at-least-one-number-a.
@@ -40,6 +40,8 @@ class AccountHelper
         )
         { return false; }
 
+        $username = strtolower($username);
+
         $requestAccount = $this->GetAccountDetails($id, $token, $id);
         if ($requestAccount === false || $requestAccount->admin != 1) { return false; }
 
@@ -68,7 +70,7 @@ class AccountHelper
         return $uid;
     }
 
-    public function UpdateAccount($id, $token, $uid, $password, $admin): bool
+    public function UpdateAccount($id, $token, $uid, $old_password, $new_password, $admin): bool
     {
         if (
             !AccountHelper::CheckID($id) ||
@@ -88,10 +90,12 @@ class AccountHelper
         if ($existingUsers === false || empty($existingUsers)) { return false; }
 
         $encryptedPassword = null;
-        if ($password != null && !AccountHelper::CheckPassword($password)) { return false; }
-        else if ($password != null)
+        if ($new_password != null && !AccountHelper::CheckPassword($new_password)) { return false; }
+        else if ($new_password != null)
         {
-            $encryptedPassword = password_hash($password, PASSWORD_BCRYPT);
+            if ($requestAccount->admin != 1 && !password_verify($old_password??'', $existingUsers[0]->password)) { return false; }
+
+            $encryptedPassword = password_hash($new_password, PASSWORD_BCRYPT);
             if ($encryptedPassword === false || $encryptedPassword === null) { return false; }
         }
 
@@ -121,7 +125,7 @@ class AccountHelper
         return true;
     }
 
-    public function GetAccountDetails($id, $token, $uid): false | object
+    public function GetAccountDetails($id, $token, $uid): false | webfilemanager_users
     {
         if (!AccountHelper::CheckID($id) || !AccountHelper::CheckToken($token) || !AccountHelper::CheckID($uid)) { return false; }
 
@@ -145,9 +149,11 @@ class AccountHelper
         return $users;
     }
 
-    public function LogIn($username, $password): false | string
+    public function LogIn($username, $password): false | object
     {
         if (!AccountHelper::CheckUsername($username) || !AccountHelper::CheckPassword($password)) { return false; }
+
+        $username = strtolower($username);
 
         $existingUsers = $this->usersTable->Select(array('username'=>$username));
         if ($existingUsers === false || empty($existingUsers)) { return false; }
@@ -161,7 +167,13 @@ class AccountHelper
             if ($decryptResult === false) { return false; }
             $tokenData = json_decode($decryptResult, true);
             if ($tokenData === null) { return false; }
-            if (time() - $tokenData['timestamp'] < AccountHelper::SESSION_TIMEOUT) { return $user->sessionToken; }
+            if (time() - $tokenData['timestamp'] < AccountHelper::SESSION_TIMEOUT)
+            {
+                $response = new stdClass();
+                $response->uid = $user->id;
+                $response->token = $user->sessionToken;
+                return $response;
+            }
         }
 
         $sessionToken = AccountHelper::Crypt(true, $user->id, json_encode(array(
@@ -178,21 +190,27 @@ class AccountHelper
             )
         );
         if ($updateResult === false) { return false; }
-        return $sessionToken;
+
+        $response = new stdClass();
+        $response->uid = $user->id;
+        $response->token = $sessionToken;
+        $response->username = $user->username;
+        return $response;
     }
 
-    public function LogOut($id, $token): bool
+    public function RevokeSession($id, $token, $uid): bool
     {
         if (!AccountHelper::CheckID($id) || !AccountHelper::CheckToken($token)) { return false; }
 
-        if ($this->VerifyToken($id, $token) === false) { return false; }
+        $requestAccount = $this->GetAccountDetails($id, $token, $id);
+        if ($requestAccount === false || ($id !== $uid && $requestAccount->admin != 1)) { return false; }
 
         $updateResult = $this->usersTable->Update(
             array(
                 'sessionToken'=>null
             ),
             array(
-                'id'=>$id
+                'id'=>$uid
             )
         );
         if ($updateResult === false) { return false; }

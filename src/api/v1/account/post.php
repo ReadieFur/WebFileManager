@@ -38,7 +38,7 @@ function CreateAccount(): never
     { Request::SendError(409, ErrorMessages::INVALID_ACCOUNT_DATA); }
 
     $response = new stdClass();
-    $response->id = $accountResult;
+    $response->uid = $accountResult;
     Request::SendResponse(200, $response);
 }
 
@@ -58,7 +58,8 @@ function UpdateAccount(): never
         Request::Post()['id'],
         Request::Post()['token'],
         Request::Post()['uid'],
-        Request::Post()['password']??null,
+        Request::Post()['old_password']??null,
+        Request::Post()['new_password']??null,
         Request::Post()['admin']
     );
     if ($accountResult === false)
@@ -104,23 +105,23 @@ function LogIn(): never
     if ($accountResult === false)
     { Request::SendError(401, ErrorMessages::INVALID_ACCOUNT_DATA); }
 
-    $response = new stdClass();
-    $response->token = $accountResult;
-    Request::SendResponse(200, $response);
+    Request::SendResponse(200, $accountResult);
 }
 
-function LogOut(): never
+function RevokeSession(): never
 {
     if (
         !isset(Request::Post()['id']) ||
-        !isset(Request::Post()['token'])
+        !isset(Request::Post()['token']) ||
+        !isset(Request::Post()['uid'])
     )
     { Request::SendError(400, ErrorMessages::INVALID_PARAMETERS); }
 
     $accountHelper = new AccountHelper();
-    $accountResult = $accountHelper->LogOut(
+    $accountResult = $accountHelper->RevokeSession(
         Request::Post()['id'],
-        Request::Post()['token']
+        Request::Post()['token'],
+        Request::Post()['uid']
     );
     if ($accountResult === false)
     { Request::SendError(401, ErrorMessages::INVALID_ACCOUNT_DATA); }
@@ -147,6 +148,30 @@ function VerifyToken(): never
     Request::SendResponse(200);
 }
 
+function GetAccountDetails(): never
+{
+    if (
+        !isset(Request::Post()['id']) ||
+        !isset(Request::Post()['token']) ||
+        !isset(Request::Post()['uid'])
+    )
+    { Request::SendError(400, ErrorMessages::INVALID_PARAMETERS); }
+
+    $accountHelper = new AccountHelper();
+    $accountResult = $accountHelper->GetAccountDetails(
+        Request::Post()['id'],
+        Request::Post()['token'],
+        Request::Post()['uid']
+    );
+    if ($accountResult === false)
+    { Request::SendError(401, ErrorMessages::INVALID_ACCOUNT_DATA); }
+
+    $filteredResult = new stdClass();
+    $filteredResult->username = $accountResult->username;
+    $filteredResult->admin = $accountResult->admin;
+    Request::SendResponse(200, $filteredResult);
+}
+
 switch (Request::Post()['method'])
 {
     case 'create_account':
@@ -157,10 +182,12 @@ switch (Request::Post()['method'])
         DeleteAccount();
     case 'log_in':
         LogIn();
-    case 'log_out':
-        LogOut();
+    case 'revoke_session':
+        RevokeSession();
     case 'verify_token':
         VerifyToken();
+    case 'get_account_details':
+        GetAccountDetails();
     default:
         Request::SendError(400, ErrorMessages::INVALID_PARAMETERS);
 }

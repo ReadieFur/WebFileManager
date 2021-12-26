@@ -83,7 +83,12 @@ class Request
         self::$SERVER['REQUEST_URI'] = $requestURI;
         self::$REQUEST_METHOD = RequestMethod::GetMethod(self::$SERVER['REQUEST_METHOD']);
         self::$GET = $_GET;
-        self::$POST = $_POST;
+        self::$POST = array();
+        foreach ($_POST as $key => $value)
+        {
+            if (is_array($value)) { self::$POST[$key] = $value; }
+            else { self::$POST[$key] = urldecode($value); }
+        }
         self::$FILES = $_FILES;
         self::$COOKIE = $_COOKIE;
         self::$ENV = $_ENV;

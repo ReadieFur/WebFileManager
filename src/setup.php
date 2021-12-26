@@ -171,11 +171,11 @@ function WebserverConfiguration()
         location $sitePath/api { try_files \$uri \$uri/ =404; }
         #endregion
 
+        #region Misc
         location $sitePath/_assets { deny all; }
         location $sitePath/_storage { deny all; }
         location $sitePath/setup.php { deny all; }
-
-        try_files \$uri \$uri/ /index.php\$query_string;
+        #endregion
 
         location ~ \.php$ {
             fastcgi_pass unix:/run/php/php8.0-fpm.sock;
