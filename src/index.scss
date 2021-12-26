@@ -1,0 +1,26 @@
+#accountContainer
+{
+    background-color: rgba(var(--backgroundAltColour), 1);
+    border-radius: 10px;
+    border: 1px solid rgba(var(--foregroundColour), 1);
+    // padding: 20px;
+    padding-top: 10px;
+    padding-bottom: 15px;
+
+    > h3
+    {
+        padding: 0 25px;
+        margin-bottom: 5px;
+    }
+
+    > form
+    {
+        display: none;
+
+        table
+        {
+            width: 100%;
+            border-spacing: 25px 0;
+        }
+    }
+}
