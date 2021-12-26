@@ -322,8 +322,3 @@ export interface IXHRReject<T>
     response: T,
     error: any
 }
-
-export interface IServerErrorResponse
-{
-    error: string;
-}

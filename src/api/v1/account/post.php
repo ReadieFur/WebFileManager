@@ -47,9 +47,9 @@ function UpdateAccount(): never
     if (
         !isset(Request::Post()['id']) ||
         !isset(Request::Post()['token']) ||
-        !isset(Request::Post()['uid']) ||
+        !isset(Request::Post()['uid'])
         // !isset(Request::Post()['password']) ||
-        !isset(Request::Post()['admin'])
+        // !isset(Request::Post()['admin'])
     )
     { Request::SendError(400, ErrorMessages::INVALID_PARAMETERS); }
 
@@ -60,7 +60,7 @@ function UpdateAccount(): never
         Request::Post()['uid'],
         Request::Post()['old_password']??null,
         Request::Post()['new_password']??null,
-        Request::Post()['admin']
+        Request::Post()['admin']??null
     );
     if ($accountResult === false)
     { Request::SendError(409, ErrorMessages::INVALID_ACCOUNT_DATA); }
@@ -167,6 +167,7 @@ function GetAccountDetails(): never
     { Request::SendError(401, ErrorMessages::INVALID_ACCOUNT_DATA); }
 
     $filteredResult = new stdClass();
+    $filteredResult->uid = $accountResult->id;
     $filteredResult->username = $accountResult->username;
     $filteredResult->admin = $accountResult->admin;
     Request::SendResponse(200, $filteredResult);

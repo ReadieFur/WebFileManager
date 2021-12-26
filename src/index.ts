@@ -1,4 +1,5 @@
-import { Main, IXHRReject, IServerErrorResponse } from './assets/js/main.js';
+import { Main, IXHRReject } from './assets/js/main.js';
+import { Account } from './assets/js/account.js';
 
 class Index
 {
@@ -65,32 +66,28 @@ class Index
         }
         else
         {
-            this.VerifyToken().then((valid) =>
+            Account.VerifyToken(
+                this.userID,
+                this.userToken
+            )
+            .then((tokenResult) =>
             {
-                this.SetTab(valid ? 'accountTab' : 'logInTab');
-                Main.XHR<IAccountDataResponse>(
+                this.SetTab(tokenResult.error === false ? 'accountTab' : 'logInTab');
+                Account.GetAccountDetails(
+                    this.userID!,
+                    this.userToken!,
+                    this.userID!
+                )
+                .then((detailsResult) =>
                 {
-                    url: `${Main.WEB_ROOT}/api/v1/account/`,
-                    method: 'POST',
-                    data:
+                    if (detailsResult.error !== false)
                     {
-                        method: 'get_account_details',
-                        id: this.userID,
-                        token: this.userToken,
-                        uid: this.userID
-                    },
-                    headers:
-                    {
-                        "Content-Type": "application/x-www-form-urlencoded"
+                        Main.Alert(Main.GetErrorMessage(detailsResult.error));
                     }
-                })
-                .then((response) =>
-                {
-                    this.elements.accountTab.username.value = response.response.username;
-                })
-                .catch((error: IXHRReject<IServerErrorResponse>) =>
-                {
-                    Main.Alert(Main.GetErrorMessage(error.error));
+                    else
+                    {
+                        this.elements.accountTab.username.value = detailsResult.data!.username;
+                    }
                 });
             });
         }
@@ -129,39 +126,18 @@ class Index
         const username = this.elements.logInTab.username.value;
         const password = this.elements.logInTab.password.value;
 
-        const xhrResponse = await Main.XHR<ILogInRespose>(
+        const logInResponse = await Account.LogIn(username, password);
+        if (logInResponse.error !== false)
         {
-            url: `${Main.WEB_ROOT}/api/v1/account/`,
-            method: 'POST',
-            data:
-            {
-                method: 'log_in',
-                username: username,
-                password: password
-            },
-            headers:
-            {
-                "Content-Type": "application/x-www-form-urlencoded"
-            }
-        })
-        .catch((error: IXHRReject<IServerErrorResponse>) =>
-        {
-            return error;
-        });
-
-        if ((xhrResponse.response as IServerErrorResponse).error !== undefined)
-        {
-            Main.Alert(Main.GetErrorMessage((xhrResponse.response as IServerErrorResponse).error));
+            Main.Alert(Main.GetErrorMessage(logInResponse.error));
             return;
         }
 
-        const response = xhrResponse.response as ILogInRespose;
-        
-        this.userID = response.uid;
-        this.userToken = response.token;
+        this.userID = logInResponse.data!.uid;
+        this.userToken = logInResponse.data!.token;
 
-        Main.SetCache('uid', response.uid, this.COOKIE_TIME, Main.WEB_ROOT + '/');
-        Main.SetCache('token', response.token, this.COOKIE_TIME, Main.WEB_ROOT + '/');
+        Main.SetCache('uid', logInResponse.data!.uid, this.COOKIE_TIME, Main.WEB_ROOT + '/');
+        Main.SetCache('token', logInResponse.data!.token, this.COOKIE_TIME, Main.WEB_ROOT + '/');
 
         this.SetTab('accountTab');
         this.elements.accountTab.username.value = username;
@@ -180,31 +156,17 @@ class Index
             return;
         }
 
-        const xhrResponse = await Main.XHR<object>(
+        const updateResponse = await Account.UpdateAccount(
+            this.userID!,
+            this.userToken!,
+            this.userID!,
+            currentPassword,
+            newPassword,
+            null
+        );
+        if (updateResponse.error !== false)
         {
-            url: `${Main.WEB_ROOT}/api/v1/account/`,
-            method: 'POST',
-            data:
-            {
-                method: 'update_account',
-                uid: this.userID,
-                token: this.userToken,
-                old_password: currentPassword,
-                new_password: newPassword
-            },
-            headers:
-            {
-                "Content-Type": "application/x-www-form-urlencoded"
-            }
-        })
-        .catch((error: IXHRReject<IServerErrorResponse>) =>
-        {
-            return error;
-        });
-
-        if ((xhrResponse.response as IServerErrorResponse).error !== undefined)
-        {
-            Main.Alert(Main.GetErrorMessage((xhrResponse.response as IServerErrorResponse).error));
+            Main.Alert(updateResponse.error);
             return;
         }
 
@@ -224,42 +186,5 @@ class Index
         this.userID = undefined;
         this.userToken = undefined;
     }
-
-    private async VerifyToken(): Promise<boolean>
-    {
-        const xhrResponse = await Main.XHR<object>(
-        {
-            url: `${Main.WEB_ROOT}/api/v1/account/`,
-            method: 'POST',
-            data:
-            {
-                method: 'verify_token',
-                id: this.userID,
-                token: this.userToken
-            },
-            headers:
-            {
-                "Content-Type": "application/x-www-form-urlencoded"
-            }
-        })
-        .catch((error: IXHRReject<IServerErrorResponse>) =>
-        {
-            return error;
-        });
-
-        return (xhrResponse.response as IServerErrorResponse).error === undefined;
-    }
 }
 new Index();
-
-interface ILogInRespose
-{
-    uid: string;
-    token: string;
-}
-
-interface IAccountDataResponse
-{
-    username: string;
-    admin: 0 | 1;
-}

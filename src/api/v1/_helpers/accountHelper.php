@@ -76,7 +76,7 @@ class AccountHelper
             !AccountHelper::CheckID($id) ||
             !AccountHelper::CheckToken($token) ||
             !AccountHelper::CheckID($uid) ||
-            !AccountHelper::CheckAdmin($admin)
+            ($admin !== null && !AccountHelper::CheckAdmin($admin))
         )
         { return false; }
 
@@ -88,6 +88,7 @@ class AccountHelper
 
         $existingUsers = $this->usersTable->Select(array('id'=>$uid));
         if ($existingUsers === false || empty($existingUsers)) { return false; }
+        else if ($admin === null) { $admin = $existingUsers[0]->admin; }
 
         $encryptedPassword = null;
         if ($new_password != null && !AccountHelper::CheckPassword($new_password)) { return false; }
