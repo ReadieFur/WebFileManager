@@ -1,0 +1,480 @@
+//Some variables get changed at runtime so I will not be using SCSS variables for some things.
+.xdebug-error, .xdebug-var-dump
+{
+    color: white !important;
+
+    td, th
+    {
+        background-color: black !important;
+    }
+}
+
+*
+{
+    //#region Fonts
+    font-family: "Montserrat", sans-serif;
+    font-weight: bold;
+    //#endregion
+
+    color: rgba(var(--foregroundColour), 1);
+
+    &:root
+    {
+        //This colour will not be changed at runtime for now but could be in the future so I have left it as a CSS variable so naming is easier in the future.
+        --linkColour: 0, 180, 235;
+    }
+}
+
+body
+{
+    background: rgba(var(--backgroundColour), 1); //For other properties, should I be using 'background' and not 'background-color'?
+    margin: 0;
+    overflow-x: hidden;
+    min-height: 100vh;
+    position: relative;
+}
+
+//#region Containers
+span
+{
+    width: 100%;
+}
+
+section
+{
+    margin-left: 10%;
+    margin-right: 10%;
+}
+//#endregion
+
+img
+{
+    &.large
+    {
+        max-width: 400px;
+        max-height: 400px;
+        min-width: 400px;
+        min-height: 400px;
+    }
+
+    &.medium
+    {
+        max-width: 250px;
+        max-height: 250px;
+        min-width: 250px;
+        min-height: 250px;
+    }
+
+    &.small
+    {
+        max-width: 75px;
+        max-height: 75px;
+        min-width: 75px;
+        min-height: 75px;
+    }
+
+    &.icon
+    {
+        max-width: 50px;
+        max-height: 50px;
+        min-width: 50px;
+        min-height: 50px;
+    }
+
+    &.round
+    {
+        border-radius: 50%;
+    }
+}
+
+a
+{
+    text-decoration: none;
+    color: inherit;
+
+    &.colour
+    {
+        color: rgba(var(--linkColour), 1);
+    }
+}
+
+//#region Text
+h1, .h1 { font-size: 3rem; }
+h2, .h2 { font-size: 2.35rem; }
+h3, .h3 { font-size: 1.75rem; }
+h4, .h4 { font-size: 1.32rem; }
+h5, .h5 { font-size: 1.02rem; }
+h6, .h6 { font-size: .88rem; }
+p, .p
+{
+    font-size: 1rem;
+    text-transform: none;
+}
+
+.paragraph
+{
+    line-height: 150%;
+}
+
+h1, h2, h3, h4, h5, h6, .h1, .h2, .h3, .h4, .h5, .h6
+{
+    text-transform: uppercase;
+    margin: 20px 10px;
+    //font-weight: bolder;
+
+    &.accent
+    {
+        color: rgba(var(--accentColour), 1);
+    }
+}
+
+.accent
+{
+    color: rgba(var(--accentColour), 1) !important;
+}
+
+.light
+{
+    font-weight: normal;
+}
+//#endregion
+
+button, .asButton
+{
+    font-weight: bold;
+    text-transform: uppercase;
+    font-size: medium;
+    color: rgba(var(--foregroundColour), 1);
+    background-color: transparent;
+    transition: ease .4s;
+    transition-property: background-color, color;
+    border-radius: 4px;
+    padding: 10px 15px;
+    outline: none;
+    border: 2.5px solid rgba(var(--foregroundColour), 1);
+
+    &:hover
+    {
+        color: rgba(var(--backgroundColour), 1);
+        background-color: rgba(var(--foregroundColour), 1);
+        cursor: pointer;
+    }
+
+    &.containsLink
+    {
+        padding: 10px 0;
+
+        > a
+        {
+            padding: 10px 15px;
+        }
+    }
+
+    &.active
+    {
+        color: rgba(var(--backgroundColour), 1);
+        background-color: rgba(var(--foregroundColour), 1);
+
+        &:not(.dontForceCursor)
+        {
+            cursor: default !important;
+        }
+    }
+
+    .fill
+    {
+        background-color: rgba(var(--backgroundColourAlt), 1);
+    }
+}
+
+.joinButtons
+{
+    display: flex;
+
+    > button, .asButton
+    {
+        //The elements in the middle do not curve off their corners when it is the last visible element.
+        &:not(.ignore)
+        {
+            //So to fix the previously mentioned issue I have TS(JS) check for the visible elements and mark which should be curved, if it should be curved then don't apply the following styles.
+            &:not(:first-of-type):not(:last-of-type)
+            {
+                &:not(.curveLeft)
+                {
+                    border-left: none;
+                    border-top-left-radius: 0;
+                    border-bottom-left-radius: 0;
+                }
+
+                &:not(.curveRight)
+                {
+                    border-right: none;
+                    border-top-right-radius: 0;
+                    border-bottom-right-radius: 0;
+                }
+            }
+
+            &:first-of-type
+            {
+                border-right: none;
+                border-top-right-radius: 0;
+                border-bottom-right-radius: 0;
+            }
+
+            &:last-of-type
+            {
+                border-left: none;
+                border-top-left-radius: 0;
+                border-bottom-left-radius: 0;
+            }
+        }
+    }
+}
+
+//#region Forms
+form, .form
+{
+    h3, h4
+    {
+        margin: 5px 0 2.5px 0;
+    }
+
+    p
+    {
+        margin-bottom: 2.5px;
+    }
+
+    input
+    {
+        &:disabled
+        {
+            color: rgba(var(--foregroundColour), 0.5);
+            border-bottom: 1px solid rgba(var(--foregroundColour), 0.5) !important;
+        }
+
+        &[type=text], &[type=email], &[type=password], &[type=number], &[type=color]
+        {
+            outline-width: 0;
+            margin-bottom: 15px;
+            font-weight: normal;
+            width: 100%;
+            height: 30px;
+            border: 0;
+            background-color: transparent;
+            border-bottom: 1px solid rgba(var(--foregroundColour), 1);
+            outline: none;
+            outline-width: 0;
+
+            &.larger
+            {
+                font-size: larger;
+            }
+        }
+
+        &[type=color]
+        {
+            border-bottom: none;
+        }
+    }
+
+    select
+    {
+        margin-bottom: 15px;
+        font-weight: normal;
+        width: 100%;
+        height: 30px;
+        color: rgba(var(--foregroundColour), 1);
+        background-color: rgba(var(--backgroundColour), 1);
+        border: 0;
+        border-bottom: 1px solid rgba(var(--foregroundColour), 1);
+        outline: none;
+        outline-width: 0;
+    }
+
+    textarea
+    {
+        width: 100%;
+        resize: vertical;
+        min-height: 60px;
+        height: max-content;
+        max-height: 150px;
+        font-weight: normal;
+        background-color: rgba(var(--backgroundColour), 1);
+        border: 1px solid rgba(var(--foregroundColour), 1);
+        border-radius: 7.5px;
+        outline: none;
+        outline-width: 0;
+    }
+}
+//#endregion
+
+.checkboxContainer
+{
+    width: max-content;
+    display: block;
+    position: relative;
+    padding-left: 20px;
+    margin: 20px 10px;
+    cursor: pointer;
+    user-select: none;
+
+    input
+    {
+        position: absolute;
+        top: 0;
+        left: 0;
+        opacity: 0;
+        cursor: pointer;
+
+        &:checked
+        {
+            ~ .checkmark
+            {
+                background-color: rgba(var(--accentColour), 1);
+
+                &:after
+                {
+                    display: block;
+                }
+            }
+        }
+    }
+
+    .checkmark
+    {
+        position: absolute;
+        top: 50%;
+        left: 0;
+        transform: translateY(-50%);
+        height: 15px;
+        width: 15px;
+        background-color: rgba(var(--backgroundColour), 1);
+        border: 1px solid rgba(var(--foregroundColour), 1);
+
+        &:after
+        {
+            content: "";
+            position: absolute;
+            display: none;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(45deg);
+            width: 3px;
+            height: 8px;
+            border: solid rgba(var(--foregroundColour), 1);
+            border-width: 0 2px 2px 0;
+        }
+    }
+}
+
+//#region Animations
+.fadeIn { animation: fadeIn 400ms }
+@keyframes fadeIn
+{
+    from { opacity: 0 }
+    to { opacity: 1 }
+}
+
+.fadeOut { animation: fadeOut 400ms }
+@keyframes fadeOut
+{
+    from { opacity: 1 }
+    to { opacity: 0 }
+}
+//#endregion
+
+//#region Misc
+hr
+{
+    border: none;
+    border-bottom: 1px solid rgba(var(--foregroundColour), 1);
+}
+
+.center
+{
+    &:not(.x):not(.y)
+    {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+    }
+
+    &.x
+    {
+        &.text
+        {
+            text-align: center;
+        }
+
+        &:not(.text)
+        {
+            position: relative;
+            width: max-content;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+    }
+
+    &.y
+    {
+        position: absolute;
+        transform: translateY(-50%);
+    }
+}
+
+.bottomStrip
+{
+    border-bottom: 4px solid rgba(var(--accentColour), 1);
+}
+
+.slideMenu
+{
+    /*width: 100%;
+    position: fixed;
+    z-index: 998;
+    height: 100px;*/
+    cursor: pointer;
+}
+
+::-webkit-scrollbar
+{
+    width: 15px;
+}
+
+::-webkit-scrollbar-track
+{
+    background: rgba(var(--backgroundColour), 1);
+}
+   
+::-webkit-scrollbar-thumb
+{
+    background: rgba(var(--backgroundAltColour), 1);
+
+    &:hover
+    {
+        background: rgba(var(--foregroundColour), 1);
+    }
+}
+
+.leftRight
+{
+    position: relative;
+    width: 100%;
+    height: max-content;
+
+    > :first-child
+    {
+        width: max-content;
+    }
+
+    > :last-child
+    {
+        position: absolute;
+        width: max-content;
+        right: 0;
+        bottom: 0;
+        margin: 0;
+    }
+}
+//#endregion
