@@ -174,9 +174,23 @@ export class Main
     {
         return new Promise<{xhr: XMLHttpRequest, response: T}>((resolve, reject) =>
         {
+            var params = new URLSearchParams();
+            if (data.data !== undefined)
+            {
+                for (var pKey in data.data)
+                {
+                    //The toString() method used below will convert the values to a suitable URL-encoded string.
+                    params.set(pKey, data.data[pKey]);
+                }
+            }
+
             var xhr = new XMLHttpRequest();
-            xhr.open(data.method, data.url, true);
-            
+            xhr.open(
+                data.method,
+                data.url + (data.method == "GET" ? "?" + params.toString() : ""),
+                true
+            );
+
             if (data.headers !== undefined)
             {
                 for (var hKey in data.headers)
@@ -232,19 +246,7 @@ export class Main
                 }
             };
 
-            if (data.data !== undefined)
-            {
-                var params = new URLSearchParams();
-                for (var pKey in data.data)
-                {
-                    params.set(encodeURIComponent(pKey), encodeURIComponent(data.data[pKey]));
-                }
-                xhr.send(params.toString());
-            }
-            else
-            {
-                xhr.send();
-            }
+            xhr.send(data.method == "GET" ? null : params);
         });
     }
 
@@ -321,4 +323,9 @@ export interface IXHRReject<T>
     statusText: string,
     response: T,
     error: any
+}
+
+export interface IServerErrorResponse
+{
+    error: string;
 }

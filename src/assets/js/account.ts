@@ -1,4 +1,4 @@
-import { Main, Dictionary, IXHRResolve, IXHRReject } from "./main.js";
+import { Main, Dictionary, IXHRResolve, IXHRReject, IServerErrorResponse } from "./main.js";
 
 export class Account
 {
@@ -164,9 +164,4 @@ export interface IAccountDetailsResponse
     uid: string;
     username: string;
     admin: 0 | 1;
-}
-
-export interface IServerErrorResponse
-{
-    error: string;
 }

@@ -87,14 +87,14 @@ if (!empty($path))
     if (array_key_exists($path[0], $roots))
     {
         if (
-            !isset(Request::Get()['id']) ||
+            !isset(Request::Get()['uid']) ||
             !isset(Request::Get()['token'])
         )
         { Request::SendError(400, ErrorMessages::INVALID_PARAMETERS); }
 
         $accountHelper = new AccountHelper();
         $accountResult = $accountHelper->VerifyToken(
-            Request::Get()['id'],
+            Request::Get()['uid'],
             Request::Get()['token']
         );
         if ($accountResult === false)
@@ -164,14 +164,14 @@ if (!empty($path))
 else
 {
     if (
-        !isset(Request::Get()['id']) ||
+        !isset(Request::Get()['uid']) ||
         !isset(Request::Get()['token'])
     )
     { Request::SendError(400, ErrorMessages::INVALID_PARAMETERS); }
 
     $accountHelper = new AccountHelper();
     $accountResult = $accountHelper->VerifyToken(
-        Request::Get()['id'],
+        Request::Get()['uid'],
         Request::Get()['token']
     );
     if ($accountResult === false)
