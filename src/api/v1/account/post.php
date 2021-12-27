@@ -31,11 +31,23 @@ function CreateAccount(): never
         Request::Post()['password'],
         Request::Post()['admin']
     );
-    //While it isn't good to assume why the account creation failed, it's most likley due to the data not matching or an account already existing, so return a 409.
-    //And yes I could easily add a function in the AccountHelper to return why the account creation failed, but I can't be arsed.
-    //In the future, maybe API V2, I will return 200 with most requests and then return the reason why an error occured, like in my current main API.
-    if ($accountResult === false)
-    { Request::SendError(409, ErrorMessages::INVALID_ACCOUNT_DATA); }
+
+    if (gettype($accountResult) === 'integer')
+    {
+        switch ($accountResult)
+        {
+            case 400:
+                Request::SendError($accountResult, ErrorMessages::INVALID_PARAMETERS);
+            case 403:
+                Request::SendError($accountResult, ErrorMessages::INVALID_ACCOUNT_DATA);
+            case 409:
+                Request::SendError($accountResult, ErrorMessages::ACCOUNT_ALREADY_EXISTS);
+            case 500:
+                Request::SendError($accountResult, ErrorMessages::UNKNOWN_ERROR);
+            default:
+                Request::SendError($accountResult, ErrorMessages::UNKNOWN_ERROR);
+        }
+    }
 
     $response = new stdClass();
     $response->uid = $accountResult;
@@ -62,10 +74,22 @@ function UpdateAccount(): never
         Request::Post()['new_password']??null,
         Request::Post()['admin']??null
     );
-    if ($accountResult === false)
-    { Request::SendError(409, ErrorMessages::INVALID_ACCOUNT_DATA); }
-
-    Request::SendResponse(200);
+    
+    switch ($accountResult)
+    {
+        case 200:
+            Request::SendResponse(200);
+        case 400:
+            Request::SendError($accountResult, ErrorMessages::INVALID_PARAMETERS);
+        case 403:
+            Request::SendError($accountResult, ErrorMessages::INVALID_ACCOUNT_DATA);
+        case 404:
+            Request::SendError($accountResult, ErrorMessages::ACCOUNT_NOT_FOUND);
+        case 500:
+            Request::SendError($accountResult, ErrorMessages::UNKNOWN_ERROR);
+        default:
+            Request::SendError($accountResult, ErrorMessages::UNKNOWN_ERROR);
+    }
 }
 
 function DeleteAccount(): never
@@ -83,10 +107,22 @@ function DeleteAccount(): never
         Request::Post()['token'],
         Request::Post()['uid']
     );
-    if ($accountResult === false)
-    { Request::SendError(401, ErrorMessages::INVALID_ACCOUNT_DATA); }
 
-    Request::SendResponse(200);
+    switch ($accountResult)
+    {
+        case 200:
+            Request::SendResponse(200);
+        case 400:
+            Request::SendError($accountResult, ErrorMessages::INVALID_PARAMETERS);
+        case 403:
+            Request::SendError($accountResult, ErrorMessages::INVALID_ACCOUNT_DATA);
+        case 404:
+            Request::SendError($accountResult, ErrorMessages::ACCOUNT_NOT_FOUND);
+        case 500:
+            Request::SendError($accountResult, ErrorMessages::UNKNOWN_ERROR);
+        default:
+            Request::SendError($accountResult, ErrorMessages::UNKNOWN_ERROR);
+    }
 }
 
 function LogIn(): never

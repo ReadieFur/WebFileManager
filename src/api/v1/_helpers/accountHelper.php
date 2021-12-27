@@ -29,7 +29,7 @@ class AccountHelper
         );
     }
     
-    public function CreateAccount($id, $token, $username, $password, $admin): false | string
+    public function CreateAccount($id, $token, $username, $password, $admin): int | string
     {
         if (
             !AccountHelper::CheckID($id) ||
@@ -38,15 +38,15 @@ class AccountHelper
             !AccountHelper::CheckPassword($password) ||
             !AccountHelper::CheckAdmin($admin)
         )
-        { return false; }
+        { return 400; }
 
         $username = strtolower($username);
 
         $requestAccount = $this->GetAccountDetails($id, $token, $id);
-        if ($requestAccount === false || $requestAccount->admin != 1) { return false; }
+        if ($requestAccount === false || $requestAccount->admin != 1) { return 403; }
 
         $existingUsers = $this->usersTable->Select(array('username'=>$username));
-        if ($existingUsers === false || count($existingUsers) > 0) { return false; }
+        if ($existingUsers === false || count($existingUsers) > 0) { return 409; }
         
         $uid = '';
         do
@@ -58,7 +58,7 @@ class AccountHelper
         while (count($existingIDs) > 0);
 
         $encryptedPassword = password_hash($password, PASSWORD_BCRYPT);
-        if ($encryptedPassword === false || $encryptedPassword === null) { return false; }
+        if ($encryptedPassword === false || $encryptedPassword === null) { return 500; }
 
         $insertResult = $this->usersTable->Insert(array(
             'id' => $uid,
@@ -66,11 +66,11 @@ class AccountHelper
             'password' => $encryptedPassword,
             'admin' => $admin ? 1 : 0
         ));
-        if ($insertResult === false) { return false; }
+        if ($insertResult === false) { return 500; }
         return $uid;
     }
 
-    public function UpdateAccount($id, $token, $uid, $old_password, $new_password, $admin): bool
+    public function UpdateAccount($id, $token, $uid, $old_password, $new_password, $admin): int
     {
         if (
             !AccountHelper::CheckID($id) ||
@@ -78,13 +78,13 @@ class AccountHelper
             !AccountHelper::CheckID($uid) ||
             ($admin !== null && !AccountHelper::CheckAdmin($admin))
         )
-        { return false; }
+        { return 400; }
 
         $requestAccount = $this->GetAccountDetails($id, $token, $id);
         if (
             $requestAccount === false ||
             ($admin == 1 && $requestAccount->admin != 1)
-        ) { return false; }
+        ) { return 403; }
 
         $existingUsers = $this->usersTable->Select(array('id'=>$uid));
         if (
@@ -94,7 +94,7 @@ class AccountHelper
                 $admin !== null &&
                 $existingUsers[0]->username == 'admin' //Make sure the admin's account permissions cannot be changed.
             )
-        ) { return false; }
+        ) { return 404; }
         else if ($admin === null) { $admin = $existingUsers[0]->admin; }
 
         $encryptedPassword = null;
@@ -104,10 +104,10 @@ class AccountHelper
             if (
                 $requestAccount->admin != 1 &&
                 !password_verify($old_password??'', $existingUsers[0]->password)
-            ) { return false; }
+            ) { return 403; }
 
             $encryptedPassword = password_hash($new_password, PASSWORD_BCRYPT);
-            if ($encryptedPassword === false || $encryptedPassword === null) { return false; }
+            if ($encryptedPassword === false || $encryptedPassword === null) { return 500; }
         }
 
         $updateResult = $this->usersTable->Update(array(
@@ -115,32 +115,32 @@ class AccountHelper
             'admin' => $admin == 1 ? '1' : '0',
             'sessionToken' => $encryptedPassword != null ? null : $existingUsers[0]->sessionToken
         ), array('id'=>$uid));
-        if ($updateResult === false) { return false; }
-        return true;
+        if ($updateResult === false) { return 500; }
+        return 200;
     }
 
-    public function DeleteAccount($id, $token, $uid): bool
+    public function DeleteAccount($id, $token, $uid): int
     {
         if (
             !AccountHelper::CheckID($id) ||
             !AccountHelper::CheckToken($token) ||
             !AccountHelper::CheckID($uid)
         )
-        { return false; }
+        { return 400; }
 
         $requestAccount = $this->GetAccountDetails($id, $token, $id);
-        if ($requestAccount === false || ($id !== $uid && $requestAccount->admin != 1)) { return false; }
+        if ($requestAccount === false || ($id !== $uid && $requestAccount->admin != 1)) { return 403; }
 
         $existingUsers = $this->usersTable->Select(array('id'=>$uid));
         if (
             $existingUsers === false ||
             empty($existingUsers) ||
             $existingUsers[0]->username == 'admin' //Make sure the admin account can't be deleted.
-        ) { return false; }
+        ) { return 404; }
 
         $deleteResult = $this->usersTable->Delete(array('id'=>$uid), true);
-        if ($deleteResult === false) { return false; }
-        return true;
+        if ($deleteResult === false) { return 500; }
+        return 200;
     }
 
     public function GetAccountDetails($id, $token, $uid): false | webfilemanager_users

@@ -25,7 +25,7 @@ export class Account
         if ((xhrResponse as IXHRReject<IServerErrorResponse>).error !== undefined)
         {
             return {
-                error: (xhrResponse as IXHRReject<IServerErrorResponse>).error,
+                error: (xhrResponse as IXHRReject<IServerErrorResponse>).response.error,
                 data: undefined
             };
         }
@@ -37,15 +37,21 @@ export class Account
     }
 
     public static async CreateAcount(
+        id: string,
+        token: string,
         username: string,
-        password: string
+        password: string,
+        admin: 0 | 1
     ): Promise<IResult<ICreateAccountResponse>>
     {
         return this.GetResult(await Account.Post(
         {
             method: "create_account",
+            id: id,
+            token: token,
             username: username,
-            password: password
+            password: password,
+            admin: admin
         }));
     }
 
@@ -53,8 +59,8 @@ export class Account
         id: string,
         token: string,
         uid: string,
-        old_password: string,
-        new_password: string,
+        old_password: string | null,
+        new_password: string | null,
         admin: 0 | 1 | null
     ): Promise<IResult<object>>
     {
