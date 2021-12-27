@@ -201,8 +201,9 @@ class ShareHelper
         {
             $result = new stdClass();
             $result->shared = false;
+            return $result;
         }
-        
+
         $result = new stdClass();
         $result->shared = true;
         $result->sid = $existingShareResult[0]->id;
