@@ -256,7 +256,7 @@ class Directory
         this.elements.directoryListing.innerHTML = "";
 
         const isRootDirectory = directoryResponse.path.length === 0;
-        if (isRootDirectory)
+        if (!isRootDirectory)
         {
             //Add the parent directory link.
             const row = this.CreateDirectoryItem(false, "..", true);
