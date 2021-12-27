@@ -156,7 +156,7 @@
             ?>
                 <section id="pageTitleContainer">
                     <div class="leftRight">
-                        <h4><?php echo $phpData->data['name'] . ($phpData->data['extension'] != null ? '.' . $phpData->data['extension'] : ''); ?></h4>
+                        <h4 id="fileName"><?php echo $phpData->data['name'] . ($phpData->data['extension'] != null ? '.' . $phpData->data['extension'] : ''); ?></h4>
                         <a class="asButton" href="<?php echo $filePath . '&download'; ?>" target="_blank">Download</a>
                     </div>
                     <hr>

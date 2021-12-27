@@ -253,6 +253,65 @@ export class Main
         });
     }
 
+    public static async FadeElement(
+        displayType: "inline" | "block" | "contents" | "flex" | "grid" | "inline-block" | "inline-flex" | "inline-table" | "run-in" | "table" | "table-caption" | "table-column-group" | "table-cell" | "table-column" | "table-row" | "none" | "initial" | "inherit",
+        element: HTMLElement
+    ): Promise<void>
+    {
+        const fadeTime = 399;
+
+        if (displayType !== "none")
+        {
+            element.style.display = displayType;
+            element.classList.remove("fadeOut");
+            element.classList.add("fadeIn");
+            await Main.Sleep(fadeTime);
+        }
+        else
+        {
+            element.classList.remove("fadeIn");
+            element.classList.add("fadeOut");
+            await Main.Sleep(fadeTime);
+            element.style.display = "none";
+        }
+    }
+
+    public static FormatUnix(unixTime: number): string
+    {
+        //String format: DD/MM/YYYY HH:mm
+        const date = new Date(unixTime);
+        return `${date.getDate() < 10 ? "0" + date.getDate().toString() : date.getDate()}/${
+            (date.getMonth() + 1) < 10 ? "0" + date.getMonth().toString() : date.getMonth()}/${
+            date.getFullYear()} ${
+            date.getHours() < 10 ? "0" + date.getHours().toString() : date.getHours()}:${
+            date.getMinutes() < 10 ? "0" + date.getMinutes().toString() : date.getMinutes()
+        }`;
+    }
+
+    public static FormatUnixToFormDate(unixTime: number): string
+    {
+        //Element value format: YYYY-MM-DDTHH:mm
+        const date = new Date(unixTime);
+        return `${date.getFullYear()}-${
+            (date.getMonth() + 1) < 10 ? "0" + date.getMonth().toString() : date.getMonth()}-${
+            date.getDate() < 10 ? "0" + date.getDate().toString() : date.getDate()}T${
+            date.getHours() < 10 ? "0" + date.getHours().toString() : date.getHours()}:${
+            date.getMinutes() < 10 ? "0" + date.getMinutes().toString() : date.getMinutes()}`;
+    }
+
+    public static FormatBytes(bytes: number, decimals = 2): string
+    {
+        if (bytes === 0) { return '0 Bytes'; }
+
+        var k = 1024;
+        var dm = decimals < 0 ? 0 : decimals;
+        var sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
+
+        var i = Math.floor(Math.log(bytes) / Math.log(k));
+
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+    }
+
     public static PreventFormSubmission(form: HTMLFormElement): void
     {
         form.addEventListener("submit", (e) => { e.preventDefault(); });
@@ -284,27 +343,29 @@ export class Main
     {
         switch (error)
         {
-            case "INVALID_PATH":
+            case EErrorMessages.INVALID_PATH:
                 return "Invalid path.";
-            case "NO_RESPONSE":
+            case EErrorMessages.NO_RESPONSE:
                 return "No response.";
-            case "METHOD_NOT_ALLOWED":
+            case EErrorMessages.METHOD_NOT_ALLOWED:
                 return "Method not allowed.";
-            case "DIRECT_REQUEST_NOT_ALLOWED":
+            case EErrorMessages.DIRECT_REQUEST_NOT_ALLOWED:
                 return "Direct request not allowed.";
-            case "INVALID_PARAMETERS":
+            case EErrorMessages.INVALID_PARAMETERS:
                 return "Invalid parameters.";
-            case "INVALID_ACCOUNT_DATA":
+            case EErrorMessages.INVALID_ACCOUNT_DATA:
                 return "Invalid account data.";
-            case "PATH_ALREADY_EXISTS":
+            case EErrorMessages.PATH_ALREADY_EXISTS:
                 return "Path already exists.";
-            case "DATABASE_ERROR":
+            case EErrorMessages.DATABASE_ERROR:
                 return "Database error.";
-            case "THUMBNAL_ERROR":
+            case EErrorMessages.THUMBNAL_ERROR:
                 return "Thumbnail error.";
-            case "INVALID_FILE_TYPE":
+            case EErrorMessages.INVALID_FILE_TYPE:
                 return "Invalid file type.";
-            case "UNKNOWN_ERROR":
+            case EErrorMessages.SHARE_EXPIRED:
+                return "Share expired.";
+            case EErrorMessages.UNKNOWN_ERROR:
                 return "Unknown error.";
             default:
                 return `Unknown error.<br><small>${String(error)}</small>`;
@@ -345,5 +406,6 @@ export enum EErrorMessages
     DATABASE_ERROR = "DATABASE_ERROR",
     THUMBNAL_ERROR = "THUMBNAL_ERROR",
     INVALID_FILE_TYPE = "INVALID_FILE_TYPE",
+    SHARE_EXPIRED = "SHARE_EXPIRED",
     UNKNOWN_ERROR = "UNKNOWN_ERROR"
 }

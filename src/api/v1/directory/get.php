@@ -102,7 +102,7 @@ if ($pathsResponse === false)
         ),
         LogLevel::ERROR
     );
-    Request::SendError(500);
+    Request::SendError(500, ErrorMessages::UNKNOWN_ERROR);
 }
 $roots = array();
 foreach ($pathsResponse as $path)
@@ -157,10 +157,10 @@ if (!empty($path))
                 ),
                 LogLevel::ERROR
             );
-            Request::SendError(500);
+            Request::SendError(500, ErrorMessages::UNKNOWN_ERROR);
         }
         else if (empty($sharesResponse))
-        { Request::SendError(404); }
+        { Request::SendError(404, ErrorMessages::INVALID_PATH); }
 
         $share = $sharesResponse[0];
         $searchPath = array();
@@ -184,10 +184,10 @@ if (!empty($path))
             case 1:
                 //Public with timeout.
                 if (time() > $share->expiry_time)
-                { Request::SendError(403); }
+                { Request::SendError(403, ErrorMessages::SHARE_EXPIRED); }
                 GetDirectory($path, $roots, $searchPath, true);
             default:
-                Request::SendError(500);
+                Request::SendError(500, ErrorMessages::UNKNOWN_ERROR);
         }
     }
 }

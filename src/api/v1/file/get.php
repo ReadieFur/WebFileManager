@@ -86,7 +86,7 @@ function GetFile(array $path): never
         else
         {
             $originalFile = dirname($formattedPath) . '/' . str_replace('.thumbnail.png', '', basename($formattedPath));
-            if (!file_exists($originalFile) || !is_file($originalFile)) { Request::SendError(404); }
+            if (!file_exists($originalFile) || !is_file($originalFile)) { Request::SendError(404, ErrorMessages::INVALID_PATH); }
 
             if (explode('/', mime_content_type($originalFile))[0] !== 'video')
             { Request::SendError(406, ErrorMessages::INVALID_FILE_TYPE); }
@@ -173,7 +173,7 @@ if ($pathsResponse === false)
         ),
         LogLevel::ERROR
     );
-    Request::SendError(500);
+    Request::SendError(500, ErrorMessages::UNKNOWN_ERROR);
 }
 $roots = array();
 foreach ($pathsResponse as $path)
@@ -228,10 +228,10 @@ if (!empty($path))
                 ),
                 LogLevel::ERROR
             );
-            Request::SendError(500);
+            Request::SendError(500, ErrorMessages::UNKNOWN_ERROR);
         }
         else if (empty($sharesResponse))
-        { Request::SendError(404); }
+        { Request::SendError(404, ErrorMessages::INVALID_PATH); }
 
         $share = $sharesResponse[0];
         $searchPath = array();
@@ -255,10 +255,10 @@ if (!empty($path))
             case 1:
                 //Public with timeout.
                 if (time() > $share->expiry_time)
-                { Request::SendError(403); }
+                { Request::SendError(403, ErrorMessages::SHARE_EXPIRED); }
                 GetFile($searchPath);
             default:
-                Request::SendError(500);
+                Request::SendError(500, ErrorMessages::UNKNOWN_ERROR);
         }
     }
 }

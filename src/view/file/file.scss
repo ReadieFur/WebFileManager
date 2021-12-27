@@ -46,7 +46,6 @@ body
     {
         position: relative;
         display: inline-block;
-
         /*
         * Header: 100px
         * #pageTitleContainer: 100px~;
@@ -54,6 +53,9 @@ body
         * Extra space: 10px
         */
         height: calc(100vh - 100px - 100px - 60px - 10px);
+        max-width: 80%; //-20% to keep inline with the width of a section element.
+        left: 50%;
+        transform: translateX(-50%);
 
         > *
         {

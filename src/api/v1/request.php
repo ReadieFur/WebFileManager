@@ -15,6 +15,7 @@ class ErrorMessages
     const DATABASE_ERROR = 'DATABASE_ERROR';
     const THUMBNAL_ERROR = 'THUMBNAL_ERROR';
     const INVALID_FILE_TYPE = 'INVALID_FILE_TYPE';
+    const SHARE_EXPIRED = 'SHARE_EXPIRED';
     const UNKNOWN_ERROR = 'UNKNOWN_ERROR';
 }
 
@@ -143,18 +144,11 @@ class Request
         }
     }
 
-    public static function SendError(int $code, string $message = null): never
+    public static function SendError(int $code, string $message = ErrorMessages::UNKNOWN_ERROR): never
     {
-        if ($message !== null)
-        {
-            $body = new stdClass();
-            $body->error = $message;
-            self::SendResponse($code, $body);
-        }
-        else
-        {
-            self::SendResponse($code);
-        }
+        $body = new stdClass();
+        $body->error = $message;
+        self::SendResponse($code, $body);
     }
 
     public static function SendResponse(int $code, stdClass $body = null): never

@@ -7,6 +7,7 @@ class File
 {
     private static PHP_DATA: IPHP_DATA;
 
+    private fileName?: HTMLHeadingElement;
     private contentContainer?: HTMLSpanElement;
 
     constructor()
@@ -26,7 +27,11 @@ class File
             return;
         }
 
+        this.fileName = Main.GetElement("#fileName");
         this.contentContainer = Main.GetElement("#contentContainer");
+
+        //While I could've set the size in PHP, to save rewriting the same code, I'll do it here.
+        this.fileName.innerText += " | " + Main.FormatBytes(File.PHP_DATA.data!.size);
 
         const urlPartsToRemove = Main.WEB_ROOT.split("/").filter(n => n).length + 2; // +2 for .../view/file/
         const urlParts = window.location.pathname.split("/").filter(n => n).slice(urlPartsToRemove);
