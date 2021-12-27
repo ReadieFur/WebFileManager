@@ -31,7 +31,6 @@
         height: $listItemIntitialHeight;
         cursor: pointer;
         user-select: none;
-        border-bottom: 1px solid rgba(var(--foregroundColour), 1);
         &:hover
         {
             background-color: rgba(var(--backgroundAltColour), 1);

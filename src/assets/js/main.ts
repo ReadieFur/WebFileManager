@@ -355,6 +355,10 @@ export class Main
                 return "Invalid parameters.";
             case EErrorMessages.INVALID_ACCOUNT_DATA:
                 return "Invalid account data.";
+            case EErrorMessages.ACCOUNT_ALREADY_EXISTS:
+                return "Account already exists.";
+            case EErrorMessages.ACCOUNT_NOT_FOUND:
+                return "Account not found.";
             case EErrorMessages.PATH_ALREADY_EXISTS:
                 return "Path already exists.";
             case EErrorMessages.DATABASE_ERROR:
@@ -402,6 +406,8 @@ export enum EErrorMessages
     DIRECT_REQUEST_NOT_ALLOWED = "DIRECT_REQUEST_NOT_ALLOWED",
     INVALID_PARAMETERS = "INVALID_PARAMETERS",
     INVALID_ACCOUNT_DATA = "INVALID_ACCOUNT_DATA",
+    ACCOUNT_ALREADY_EXISTS = "ACCOUNT_ALREADY_EXISTS",
+    ACCOUNT_NOT_FOUND = "ACCOUNT_NOT_FOUND",
     PATH_ALREADY_EXISTS = "PATH_ALREADY_EXISTS",
     DATABASE_ERROR = "DATABASE_ERROR",
     THUMBNAL_ERROR = "THUMBNAL_ERROR",
