@@ -255,7 +255,8 @@ class Directory
         //Clear the directory listing.
         this.elements.directoryListing.innerHTML = "";
 
-        if (directoryResponse.path.length > 0)
+        const isRootDirectory = directoryResponse.path.length === 0;
+        if (isRootDirectory)
         {
             //Add the parent directory link.
             const row = this.CreateDirectoryItem(false, "..", true);
@@ -266,7 +267,7 @@ class Directory
         //Add the directories first.
         for (const directory of directoryResponse.directories)
         {
-            const row = this.CreateDirectoryItem(!directoryResponse.sharedPath, directory, true);
+            const row = this.CreateDirectoryItem(!directoryResponse.sharedPath && !isRootDirectory, directory, true);
             this.elements.directoryListing.appendChild(row);
         }
 
