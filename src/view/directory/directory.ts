@@ -255,7 +255,7 @@ class Directory
         //Clear the directory listing.
         this.elements.directoryListing.innerHTML = "";
 
-        const isRootDirectory = directoryResponse.path.length === 0;
+        const isRootDirectory = directoryResponse.path.length === 0 || directoryResponse.sharedPath;
         if (!isRootDirectory)
         {
             //Add the parent directory link.
