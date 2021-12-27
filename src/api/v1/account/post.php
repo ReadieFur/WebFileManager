@@ -173,6 +173,35 @@ function GetAccountDetails(): never
     Request::SendResponse(200, $filteredResult);
 }
 
+function GetAllAccounts(): never
+{
+    if (
+        !isset(Request::Post()['id']) ||
+        !isset(Request::Post()['token'])
+    )
+    { Request::SendError(400, ErrorMessages::INVALID_PARAMETERS); }
+
+    $accountHelper = new AccountHelper();
+    $accountsResult = $accountHelper->GetAllAccounts(
+        Request::Post()['id'],
+        Request::Post()['token']
+    );
+    if ($accountsResult === false)
+    { Request::SendError(401, ErrorMessages::INVALID_ACCOUNT_DATA); }
+
+    $filteredResult = new stdClass();
+    $filteredResult->accounts = array();
+    foreach ($accountsResult as $user)
+    {
+        $filteredResult->accounts[] = array(
+            'uid' => $user->id,
+            'username' => $user->username,
+            'admin' => $user->admin == 1 ? 1 : 0
+        );
+    }
+    Request::SendResponse(200, $filteredResult);
+}
+
 switch (Request::Post()['method'])
 {
     case 'create_account':
@@ -189,6 +218,8 @@ switch (Request::Post()['method'])
         VerifyToken();
     case 'get_account_details':
         GetAccountDetails();
+    case 'get_all_accounts':
+        GetAllAccounts();
     default:
         Request::SendError(400, ErrorMessages::INVALID_PARAMETERS);
 }

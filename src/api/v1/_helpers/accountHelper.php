@@ -87,14 +87,24 @@ class AccountHelper
         ) { return false; }
 
         $existingUsers = $this->usersTable->Select(array('id'=>$uid));
-        if ($existingUsers === false || empty($existingUsers)) { return false; }
+        if (
+            $existingUsers === false ||
+            empty($existingUsers) ||
+            (
+                $admin !== null &&
+                $existingUsers[0]->username == 'admin' //Make sure the admin's account permissions cannot be changed.
+            )
+        ) { return false; }
         else if ($admin === null) { $admin = $existingUsers[0]->admin; }
 
         $encryptedPassword = null;
         if ($new_password != null && !AccountHelper::CheckPassword($new_password)) { return false; }
         else if ($new_password != null)
         {
-            if ($requestAccount->admin != 1 && !password_verify($old_password??'', $existingUsers[0]->password)) { return false; }
+            if (
+                $requestAccount->admin != 1 &&
+                !password_verify($old_password??'', $existingUsers[0]->password)
+            ) { return false; }
 
             $encryptedPassword = password_hash($new_password, PASSWORD_BCRYPT);
             if ($encryptedPassword === false || $encryptedPassword === null) { return false; }
@@ -121,6 +131,13 @@ class AccountHelper
         $requestAccount = $this->GetAccountDetails($id, $token, $id);
         if ($requestAccount === false || ($id !== $uid && $requestAccount->admin != 1)) { return false; }
 
+        $existingUsers = $this->usersTable->Select(array('id'=>$uid));
+        if (
+            $existingUsers === false ||
+            empty($existingUsers) ||
+            $existingUsers[0]->username == 'admin' //Make sure the admin account can't be deleted.
+        ) { return false; }
+
         $deleteResult = $this->usersTable->Delete(array('id'=>$uid), true);
         if ($deleteResult === false) { return false; }
         return true;
@@ -142,8 +159,8 @@ class AccountHelper
     {
         if (!AccountHelper::CheckID($id) || !AccountHelper::CheckToken($token)) { return false; }
 
-        if ($this->VerifyToken($id, $token) === false)
-        { return false; }
+        $requestAccount = $this->GetAccountDetails($id, $token, $id);
+        if ($requestAccount === false || $requestAccount->admin != 1) { return false; }
 
         $users = $this->usersTable->Select(array());
         if ($users === false) { return false; }

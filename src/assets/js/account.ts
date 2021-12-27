@@ -140,6 +140,19 @@ export class Account
             uid: uid
         }));
     }
+
+    public static async GetAllAccounts(
+        id: string,
+        token: string
+    ): Promise<IResult<IAccountsResponse>>
+    {
+        return this.GetResult(await Account.Post(
+        {
+            method: "get_all_accounts",
+            id: id,
+            token: token
+        }));
+    }
 }
 
 export interface IResult<T>
@@ -164,4 +177,9 @@ export interface IAccountDetailsResponse
     uid: string;
     username: string;
     admin: 0 | 1;
+}
+
+export interface IAccountsResponse
+{
+    accounts: IAccountDetailsResponse[];
 }
