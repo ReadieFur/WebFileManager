@@ -1,0 +1,78 @@
+//https://github.com/kOFReadie/Cloud/blob/main/src/files/view/view.scss
+body
+{
+    &.inIFrame
+    {
+        #header
+        {
+            display: none;
+        }
+
+        #pageTitleContainer
+        {
+            padding-top: 20px;
+        }
+
+        #contentContainer
+        {
+            /*
+            * #pageTitleContainer: 100px~;
+            */
+            position: absolute;
+            bottom: 0;
+            height: calc(100vh - 100px);
+        }
+
+        #footer
+        {
+            display: none;
+        }
+
+        &::after
+        {
+            display: none;
+        }
+    }
+
+    #pageTitleContainer
+    {
+        h4
+        {
+            text-transform: none;
+        }
+    }
+
+    #contentContainer
+    {
+        position: relative;
+        display: inline-block;
+
+        /*
+        * Header: 100px
+        * #pageTitleContainer: 100px~;
+        * Footer: 60px
+        * Extra space: 10px
+        */
+        height: calc(100vh - 100px - 100px - 60px - 10px);
+
+        > *
+        {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            max-width: 100%;
+            max-height: 100%;
+        }
+
+        > pre
+        {
+            overflow-x: auto;
+            overflow-y: auto;
+            background-color: rgba(var(--backgroundAltColour), 1);
+            padding: 15px 20px;
+            // white-space: pre-wrap;
+            // word-wrap: break-word;
+        }
+    }
+}
