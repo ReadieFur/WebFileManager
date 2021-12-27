@@ -1,6 +1,8 @@
 <?php
 require_once __DIR__ . '/../../_assets/logger/logger.php';
 
+global $overrideDefaults;
+
 class ErrorMessages
 {
     const INVALID_PATH = 'INVALID_PATH';
@@ -70,6 +72,8 @@ class Request
     //This should be automatically called by PHP when the class is loaded (run at the bottom of this file).
     public static function Init(): void
     {
+        global $overrideDefaults;
+
         if (self::$initialized === true) { return; }
         self::$initialized = true;
 
@@ -96,8 +100,11 @@ class Request
         self::$REQUEST = $_REQUEST;
         // self::$SESSION = $_SESSION;
 
-        header('Content-Type: application/json'); //All data should/will be returned in JSON format.
-        http_response_code(self::DEFAULT_RESPONSE_CODE); //Set as the default response.
+        if ($overrideDefaults !== true)
+        {
+            header('Content-Type: application/json'); //All data should/will be returned in JSON format.
+            http_response_code(self::DEFAULT_RESPONSE_CODE); //Set as the default response.
+        }
     }
 
     public static function RunScriptForRequestMethod(string $baseDirectory): never

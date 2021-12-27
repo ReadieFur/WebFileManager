@@ -11,15 +11,61 @@ Request::DenyIfNotRequestMethod(RequestMethod::GET);
 Request::DenyIfDirectRequest(__FILE__);
 #endregion
 
+function GetFileDetails(string $path): never
+{
+    $pathInfo = pathinfo($path);
+    $fileDetails = new stdClass();
+    $fileDetails->name = $pathInfo['filename'];
+    $fileDetails->extension = $pathInfo['extension'];
+    $fileDetails->size = filesize($path);
+    $fileDetails->lastModified = filemtime($path);
+    $fileDetails->mimeType = mime_content_type($path);
+
+    try
+    {
+        $mimeParentType = explode('/', $fileDetails->mimeType)[0];
+        if ($mimeParentType === 'image')
+        {
+            list($width, $height) = getimagesize($path);
+            $fileDetails->width = $width;
+            $fileDetails->height = $height;
+        }
+        else if ($mimeParentType === 'video')
+        {
+            $ffprobe = FFMpeg\FFProbe::create(array(
+                'ffmpeg.binaries' => Config::Config()['ffmpeg']['binaries']['ffmpeg'],
+                'ffprobe.binaries' => Config::Config()['ffmpeg']['binaries']['ffprobe']
+            ));
+            $stream = $ffprobe->streams($path)->videos()->first();
+            $fileDetails->width = intval($stream->get('width'));
+            $fileDetails->height = intval($stream->get('height'));
+        }
+    }
+    catch (Exception $e)
+    {
+        Logger::Log('Failed to get file details: ' . $e->getMessage(), LogLevel::ERROR);
+        Request::SendError(500, ErrorMessages::UNKNOWN_ERROR);
+    }
+
+    Request::SendResponse(200, $fileDetails);
+}
+
 function GetFile(array $path): never
 {
     $formattedPath = '/' . implode('/', $path);
     if (file_exists($formattedPath) && is_file($formattedPath))
     {
         // Logger::Log('Getting contents of file: ' . $formattedPath, LogLevel::DEBUG);
-        $fileStream = new FileStream($formattedPath, array_key_exists('download', Request::Get()));
-        $fileStream->Begin();
-        // exit; //This is called from the end function which is called from the begin function above.
+        if (array_key_exists('details', Request::Get()))
+        {
+            GetFileDetails($formattedPath);
+        }
+        else
+        {
+            $fileStream = new FileStream($formattedPath, array_key_exists('download', Request::Get()));
+            $fileStream->Begin();
+            // exit; //This is called from the end function which is called from the begin function above.
+        }
     }
     else if (str_ends_with(basename($formattedPath), '.thumbnail.png'))
     {
@@ -27,8 +73,15 @@ function GetFile(array $path): never
         $thumbnailPath = __DIR__ . '/../../../_storage/thumbnails/' . str_replace('/', '_', AccountHelper::Crypt(true, basename($formattedPath), $formattedPath)) . '.thumbnail.png';
         if (file_exists($thumbnailPath) && is_file($thumbnailPath))
         {
-            $fileStream = new FileStream($thumbnailPath, array_key_exists('download', Request::Get()));
-            $fileStream->Begin();
+            if (array_key_exists('details', Request::Get()))
+            {
+                GetFileDetails($thumbnailPath);
+            }
+            else
+            {
+                $fileStream = new FileStream($thumbnailPath, array_key_exists('download', Request::Get()));
+                $fileStream->Begin();
+            }
         }
         else
         {
@@ -79,8 +132,15 @@ function GetFile(array $path): never
                 }
                 else { rename($thumbnailPath, $thumbnailPath); }
 
-                $fileStream = new FileStream($thumbnailPath, array_key_exists('download', Request::Get()));
-                $fileStream->Begin();
+                if (array_key_exists('details', Request::Get()))
+                {
+                    GetFileDetails($thumbnailPath);
+                }
+                else
+                {
+                    $fileStream = new FileStream($thumbnailPath, array_key_exists('download', Request::Get()));
+                    $fileStream->Begin();
+                }
             }
             catch (Exception $e)
             {
@@ -122,7 +182,7 @@ foreach ($pathsResponse as $path)
 }
 #endregion
 
-$path = array_slice(Request::URLStrippedRoot(), 3);
+$path = array_slice(Request::URLStrippedRoot(), 3); //3 for the .../api/v1/file/ prefix.
 if (!empty($path))
 {
     if (array_key_exists($path[0], $roots))

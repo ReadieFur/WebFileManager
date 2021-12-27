@@ -4,6 +4,7 @@ require_once __DIR__ . '/../../../_assets/configuration/config.php';
 require_once __DIR__ . '/../_helpers/accountHelper.php';
 require_once __DIR__ . '/../../../_assets/database/tables/webfilemanager_paths/webfilemanager_paths.php';
 require_once __DIR__ . '/../../../_assets/database/tables/webfilemanager_shares/webfilemanager_shares.php';
+require_once __DIR__ . '/../../../_assets/libs/vendor/autoload.php';
 
 #region Request checks
 Request::DenyIfNotRequestMethod(RequestMethod::GET);
@@ -44,6 +45,34 @@ function GetDirectory(array $webPath, array $roots, array $path, bool $sharedPat
             $fileDetails->size = filesize($fullPath);
             $fileDetails->lastModified = filemtime($fullPath);
             $fileDetails->mimeType = mime_content_type($fullPath);
+
+            //To keep directory listings fast I will not send extra information about files. FFMPEG will slow down the request a lot, if more information is needed for that file the client can request it by sending a request for the file with ?details=true.
+            // try
+            // {
+            //     $mimeParentType = explode('/', $fileDetails->mimeType)[0];
+            //     if ($mimeParentType === 'image')
+            //     {
+            //         list($width, $height) = getimagesize($fullPath);
+            //         $fileDetails->width = $width;
+            //         $fileDetails->height = $height;
+            //     }
+            //     else if ($mimeParentType === 'video')
+            //     {
+            //         $ffprobe = FFMpeg\FFProbe::create(array(
+            //             'ffmpeg.binaries' => Config::Config()['ffmpeg']['binaries']['ffmpeg'],
+            //             'ffprobe.binaries' => Config::Config()['ffmpeg']['binaries']['ffprobe']
+            //         ));
+            //         $stream = $ffprobe->streams($fullPath)->videos()->first();
+            //         $fileDetails->width = intval($stream->get('width'));
+            //         $fileDetails->height = intval($stream->get('height'));
+            //     }
+            // }
+            // catch (Exception $e)
+            // {
+            //     Logger::Log('Failed to get file details: ' . $e->getMessage(), LogLevel::ERROR);
+            //     Request::SendError(500, ErrorMessages::UNKNOWN_ERROR);
+            // }
+
             $filesWithDetails[] = $fileDetails;
         }
         $response->files = $filesWithDetails;

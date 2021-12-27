@@ -170,10 +170,13 @@ export class Main
         method: 'GET' | 'POST',
         data?: Dictionary<any>,
         headers?: Dictionary<string>,
+        responseType?: 'json' | 'text'
     }): Promise<IXHRResolve<T>>
     {
         return new Promise<{xhr: XMLHttpRequest, response: T}>((resolve, reject) =>
         {
+            if (data.responseType === undefined) { data.responseType = 'json'; }
+
             var params = new URLSearchParams();
             if (data.data !== undefined)
             {
@@ -209,7 +212,7 @@ export class Main
                         {
                             resolve({
                                 xhr: xhr,
-                                response: JSON.parse(xhr.responseText)
+                                response: data.responseType === "json" ? JSON.parse(xhr.responseText) : xhr.responseText
                             });
                         }
                         catch (e)
@@ -229,7 +232,7 @@ export class Main
                             reject(<IXHRReject<any>>{
                                 status: xhr.status,
                                 statusText: xhr.statusText,
-                                response: JSON.parse(xhr.responseText),
+                                response: data.responseType === "json" ? JSON.parse(xhr.responseText) : xhr.responseText,
                                 error: null
                             });
                         }
@@ -328,4 +331,19 @@ export interface IXHRReject<T>
 export interface IServerErrorResponse
 {
     error: string;
+}
+
+export enum EErrorMessages
+{
+    INVALID_PATH = "INVALID_PATH",
+    NO_RESPONSE = "NO_RESPONSE",
+    METHOD_NOT_ALLOWED = "METHOD_NOT_ALLOWED",
+    DIRECT_REQUEST_NOT_ALLOWED = "DIRECT_REQUEST_NOT_ALLOWED",
+    INVALID_PARAMETERS = "INVALID_PARAMETERS",
+    INVALID_ACCOUNT_DATA = "INVALID_ACCOUNT_DATA",
+    PATH_ALREADY_EXISTS = "PATH_ALREADY_EXISTS",
+    DATABASE_ERROR = "DATABASE_ERROR",
+    THUMBNAL_ERROR = "THUMBNAL_ERROR",
+    INVALID_FILE_TYPE = "INVALID_FILE_TYPE",
+    UNKNOWN_ERROR = "UNKNOWN_ERROR"
 }

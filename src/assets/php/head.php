@@ -2,6 +2,8 @@
     require_once __DIR__ . '/../../_assets/configuration/config.php';
 
     global $title;
+    global $description;
+    global $ogType;
 
     $dirName = ltrim(ucwords(str_replace("_", " ", basename($_SERVER['REQUEST_URI']))), '/');
 
@@ -11,7 +13,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="color-scheme" content="dark light">
-<meta property="og:type" content="website">
+<meta property="og:type" content="<?php echo $ogType !== null ? $ogType : 'website'; ?>">
 <meta property="og:title" content="<?php echo $_title; ?>"/>
 <meta property="og:description" content="<?php echo $_description; ?>"/>
 <meta property="og:url" content="<?php echo $_SERVER['REQUEST_URI']; ?>"/>

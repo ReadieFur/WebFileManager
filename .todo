@@ -3,3 +3,4 @@
 ☐ Add more share types, e.g. with password.
 ☐ Delete cached thumbnails after a certain time.
 ☐ Return share status on files and directories.
+☐ Fix the way the view file page gets file data on the server side.

@@ -1,5 +1,4 @@
 <?php
-    //This is to be the login page.
     require_once __DIR__ . '/assets/php/main.php';
     $title = 'Account';
 ?>

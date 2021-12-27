@@ -197,11 +197,15 @@ class ShareHelper
             'path' => $locationPart
         ));
         if ($existingShareResult === false) { return 500; }
-        else if (empty($existingShareResult)) { return 404; }
+        else if (empty($existingShareResult))
+        {
+            $result = new stdClass();
+            $result->shared = false;
+        }
         
         $result = new stdClass();
+        $result->shared = true;
         $result->sid = $existingShareResult[0]->id;
-        $result->path = $explodedPath;
         $result->share_type = $existingShareResult[0]->share_type;
         $result->expiry_time = $existingShareResult[0]->expiry_time;
         return $result;
