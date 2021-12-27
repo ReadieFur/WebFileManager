@@ -1,4 +1,6 @@
 /.vscode
+dist/
+dist.zip
 src/_assets/configuration/config.json
 src/_assets/libs/vendor
 src/_storage
