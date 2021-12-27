@@ -1,0 +1,130 @@
+$finalWidth: 15%;
+
+.tabButtons
+{
+    display: none;
+
+    > h4
+    {
+        margin-left: 0;
+    }
+
+    > .joinButtons
+    {
+        > button
+        {
+            font-weight: normal;
+        }
+    }
+}
+
+.tabs
+{
+    > form
+    {
+        display: none;
+
+        > table > tbody > tr > td
+        {
+            &:last-child
+            {
+                width: $finalWidth;
+            }
+        }
+    }
+}
+
+table
+{
+    width: 100%;
+    padding-top: 20px;
+    border-spacing: 0;    
+
+    > tbody > tr
+    {
+        &.listItem
+        {
+            $listItemIntitialHeight: 50px;
+            min-height: $listItemIntitialHeight;
+            max-height: $listItemIntitialHeight;
+            height: $listItemIntitialHeight;
+            
+            &.selectable
+            {
+                cursor: pointer;
+                user-select: none;
+                &:hover
+                {
+                    background-color: rgba(var(--backgroundAltColour), 1);
+                }
+            }
+        }
+
+        > th
+        {
+            padding: 0px 10px 15px 10px;
+            text-align: left;
+            font-weight: bold;
+        }
+
+        > td
+        {
+            padding-left: 10px;
+
+            *
+            {
+                font-weight: normal;
+            }
+
+            p
+            {
+                width: max-content;
+            }
+        }
+    }
+
+    &.listingContainer
+    {
+        > tbody > tr
+        {
+            > th
+            {
+                border-bottom: 2px solid rgba(var(--foregroundColour), 1);
+            }
+
+            > td
+            {
+                $width: (100% - $finalWidth) / 2; //Devide by 2 to get the width of the two remaining columns.
+                
+                &:nth-child(1)
+                {
+                    width: $width;
+                }
+    
+                &:nth-child(2)
+                {
+                    width: $width;
+    
+                    *
+                    {
+                        cursor: default;
+                    }
+                }
+    
+                &:nth-child(3)
+                {
+                    width: $finalWidth;
+    
+                    .red
+                    {
+                        &:hover
+                        {
+                            background-color: red;
+                            color: white;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
