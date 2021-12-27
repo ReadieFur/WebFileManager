@@ -64,7 +64,7 @@ php setup.php -configure webserver
 ## Getting started
 ### Getting onto the app
 Once you have installed and set up the program, you should be able to access the page from your webserver.  
-The first thing you should do is log into the default admin account with the username `admin` and the password `admin`.  
+The first thing you should do is log into the default admin account with the username `admin` and the password `AdminUser01`.  
 **Note:** The default admin account is only used for the initial setup and is not intended to be used for normal use, it is highly advised that you change the password for the default admin account.
 
 ### Managing accounts
