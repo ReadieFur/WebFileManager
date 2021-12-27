@@ -1,5 +1,4 @@
 <?php
-    //This is to be the login page.
     require_once __DIR__ . '/../../assets/php/main.php';
     require_once __DIR__ . '/../../_assets/configuration/config.php';
 ?>
@@ -14,6 +13,39 @@
     <?php echo Main::ExecuteAndRead(__DIR__ . '/../../assets/php/header.php'); ?>
 </header>
 <body>
+    <div id="filePreviewContainer">
+        <div class="background"></div>
+        <iframe id="filePreview"></iframe>
+    </div>
+    <div id="sharingMenu">
+        <div class="background"></div>
+        <div class="container">
+            <h3>Sharing options:</h3>
+            <form>
+                <select id="sharingTypes">
+                    <option value="private">Private</option>
+                    <option value="public">Public</option>
+                </select>
+                <table>
+                    <!--There are no options for public sharing-->
+                    <tbody id="publicSharing">
+                        <tr>
+                            <td>
+                                <p>Expiry Date:</p>
+                                <input type="datetime-local" id="publicExpiryTime">
+                                <br><br>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </form>
+            <p id="unsavedSharingChangesNotice" class="light">You have unsaved changes!</p>
+            <div class="joinButtons">
+                <button id="sharingLink">Copy Link</button>
+                <button id="saveSharing">Save</button>
+            </div>
+        </div>
+    </div>
     <section>
         <!-- Modified from: https://github.com/kOFReadie/Cloud/blob/main/src/files/index.php -->
         <table class="directoryListingContainer">

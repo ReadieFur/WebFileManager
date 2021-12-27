@@ -1,24 +1,86 @@
-import { Main, IXHRResolve, IXHRReject, IServerErrorResponse } from "../../assets/js/main.js";
+import { Main, IXHRReject, IServerErrorResponse } from "../../assets/js/main.js";
 
 class Directory
 {
     private firstLoad: boolean;
+    private directory: string[];
     private elements:
     {
         directoryListing: HTMLTableSectionElement;
+        preview:
+        {
+            container: HTMLDivElement;
+            background: HTMLDivElement;
+            iframe: HTMLIFrameElement;
+        };
+        sharingMenu:
+        {
+            container: HTMLDivElement,
+            background: HTMLDivElement,
+            sharingTypes: HTMLSelectElement,
+            subMenus:
+            {
+                publicOptions:
+                {
+                    container: HTMLTableSectionElement,
+                    publicSharingTimeInput: HTMLInputElement
+                }
+            },
+            unsavedChangesNotice: HTMLParagraphElement,
+            buttonContainer: HTMLDivElement,
+            sharingLink: HTMLButtonElement,
+            saveButton: HTMLButtonElement
+        }
     };
-    private directory: string[];
 
     constructor()
     {
         new Main();
 
         this.firstLoad = true;
+        this.directory = [];
         this.elements =
         {
-            directoryListing: Main.GetElement("#directoryListing")    
+            directoryListing: Main.GetElement("#directoryListing"),
+            preview:
+            {
+                container: Main.ThrowIfNullOrUndefined(document.querySelector("#filePreviewContainer")),
+                background: Main.ThrowIfNullOrUndefined(document.querySelector("#filePreviewContainer > .background")),
+                iframe: Main.ThrowIfNullOrUndefined(document.querySelector("#filePreview"))
+            },
+            sharingMenu:
+            {
+                container: Main.ThrowIfNullOrUndefined(document.querySelector("#sharingMenu")),
+                background: Main.ThrowIfNullOrUndefined(document.querySelector("#sharingMenu > .background")),
+                sharingTypes: Main.ThrowIfNullOrUndefined(document.querySelector("#sharingTypes")),
+                subMenus:
+                {
+                    publicOptions:
+                    {
+                        container: Main.ThrowIfNullOrUndefined(document.querySelector("#publicSharing")),
+                        publicSharingTimeInput: Main.ThrowIfNullOrUndefined(document.querySelector("#publicExpiryTime"))
+                    }
+                },
+                unsavedChangesNotice: Main.ThrowIfNullOrUndefined(document.querySelector("#unsavedSharingChangesNotice")),
+                buttonContainer: Main.ThrowIfNullOrUndefined(document.querySelector("#sharingMenu .joinButtons")),
+                sharingLink: Main.ThrowIfNullOrUndefined(document.querySelector("#sharingLink")),
+                saveButton: Main.ThrowIfNullOrUndefined(document.querySelector("#saveSharing"))
+            }
         };
-        this.directory = [];
+
+        this.elements.preview.background.addEventListener("click", () =>
+        {
+            Main.FadeElement("none", this.elements.preview.container);
+            this.elements.preview.iframe.src = "";
+        });
+
+        this.elements.sharingMenu.background.addEventListener("click", () => { Main.FadeElement("none", this.elements.sharingMenu.container); });
+        this.elements.sharingMenu.sharingTypes.addEventListener("change", () => { this.UpdateSharingMenu(); });
+        this.elements.sharingMenu.subMenus.publicOptions.publicSharingTimeInput.addEventListener("change", () =>
+        {
+            this.elements.sharingMenu.unsavedChangesNotice.style.display = "block";
+            // this.elements.sharingMenu.saveButton.style.display = "block";
+        });
 
         //Navigation bar highlight override.
         Main.GetElement<HTMLAnchorElement>(`.navigationContainer a[href='${Main.WEB_ROOT}/view/directory/']`).classList.add("accent");
@@ -28,14 +90,149 @@ class Directory
         this.OnWindowPopState(window.location.pathname);
     }
 
-    private OnWindowPopState(path: string)
+    private OnWindowPopState(path: string): void
     {
-        const urlPartsToRemove = Main.WEB_ROOT.split("/").filter(n => n).length + 2; // +2 for .../view/directory
+        const urlPartsToRemove = Main.WEB_ROOT.split("/").filter(n => n).length + 2; // +2 for .../view/directory/
         const urlParts = path.split("/").filter(n => n).slice(urlPartsToRemove);
         this.LoadDirectory(urlParts.join("/"), true);
     }
 
-    private async LoadDirectory(path: string, fromPopState: boolean)
+    private UpdateSharingMenu(): void
+    {
+        this.elements.sharingMenu.unsavedChangesNotice.style.display = "block";
+        // this.elements.sharingMenu.saveButton.style.display = "block";
+        switch (this.elements.sharingMenu.sharingTypes.value)
+        {
+            case "public":
+                this.elements.sharingMenu.subMenus.publicOptions.container.style.display = "table-row";
+                this.elements.sharingMenu.subMenus.publicOptions.publicSharingTimeInput.value = "";
+                break;
+            case "private":
+                this.elements.sharingMenu.subMenus.publicOptions.container.style.display = "none";
+                break;
+        }
+    }
+
+    private async ShowSharingMenu(path: string, isDirectory: boolean, updateVisibility: boolean = true): Promise<void>
+    {
+        if (path.startsWith("/")) { path = path.substring(1); }
+
+        const shareDetailsResponse = await this.GetShareDetails(path, isDirectory);
+        if (typeof shareDetailsResponse === "string")
+        {
+            Main.Alert(Main.GetErrorMessage(shareDetailsResponse));
+            return;
+        }
+
+        this.elements.sharingMenu.unsavedChangesNotice.style.display = "none";
+        // this.elements.sharingMenu.saveButton.style.display = "none";
+        this.elements.sharingMenu.sharingTypes.value = shareDetailsResponse.shared ? "public" : "private";
+        if (shareDetailsResponse.shared)
+        {
+            this.elements.sharingMenu.sharingLink.style.display = "block";
+            this.elements.sharingMenu.sharingLink.onclick = () =>
+            {
+                navigator.clipboard.writeText(
+                    window.location.origin +
+                    Main.WEB_ROOT +
+                    `/view/${isDirectory ? "directory" : "file"}/` +
+                    shareDetailsResponse.sid!
+                );
+            };
+            this.elements.sharingMenu.buttonContainer.classList.add("joinButtons");
+            this.elements.sharingMenu.subMenus.publicOptions.container.style.display = "table-row";
+            this.elements.sharingMenu.subMenus.publicOptions.publicSharingTimeInput.value = Main.FormatUnixToFormDate(parseInt(shareDetailsResponse.expiry_time!) * 1000);
+        }
+        else
+        {
+            this.elements.sharingMenu.sharingLink.style.display = "none";
+            this.elements.sharingMenu.buttonContainer.classList.remove("joinButtons");
+            this.elements.sharingMenu.subMenus.publicOptions.container.style.display = "none";
+        }
+
+        this.elements.sharingMenu.saveButton.onclick = async () =>
+        {
+            if (shareDetailsResponse.shared)
+            {
+                switch (this.elements.sharingMenu.sharingTypes.value)
+                {
+                    case "public":
+                        const updateResponse = await this.SaveShareDetails(
+                            "update",
+                            isDirectory,
+                            {
+                                sid: shareDetailsResponse.sid,
+                                path: path,
+                                share_type: this.elements.sharingMenu.subMenus.publicOptions.publicSharingTimeInput.value !== "" ? 1 : 0,
+                                expiry_time: this.elements.sharingMenu.subMenus.publicOptions.publicSharingTimeInput.value !== "" ? new Date(this.elements.sharingMenu.subMenus.publicOptions.publicSharingTimeInput.value).getTime() / 1000 : 0
+                            }
+                        );
+                        if (typeof updateResponse === "string")
+                        {
+                            Main.Alert(Main.GetErrorMessage(updateResponse));
+                            return;
+                        }
+                        else
+                        {
+                            this.ShowSharingMenu(path, isDirectory, false);
+                        }
+                        break;
+                    case "private":
+                        const deleteResponse = await this.SaveShareDetails(
+                            "delete",
+                            isDirectory,
+                            {
+                                sid: shareDetailsResponse.sid
+                            }
+                        );
+                        if (typeof deleteResponse === "string")
+                        {
+                            Main.Alert(Main.GetErrorMessage(deleteResponse));
+                        }
+                        else
+                        {
+                            this.ShowSharingMenu(path, isDirectory, false);
+                        }
+                        break;
+                }
+            }
+            else
+            {
+                if (this.elements.sharingMenu.sharingTypes.value === "public")
+                {
+                    const updateResponse = await this.SaveShareDetails(
+                        "add",
+                        isDirectory,
+                        {
+                            path: path,
+                            share_type: this.elements.sharingMenu.subMenus.publicOptions.publicSharingTimeInput.value !== "" ? 1 : 0,
+                            expiry_time: this.elements.sharingMenu.subMenus.publicOptions.publicSharingTimeInput.value !== "" ? new Date(this.elements.sharingMenu.subMenus.publicOptions.publicSharingTimeInput.value).getTime() / 1000 : 0
+                        }
+                    );
+                    if (typeof updateResponse === "string")
+                    {
+                        Main.Alert(Main.GetErrorMessage(updateResponse));
+                        return;
+                    }
+                    else
+                    {
+                        this.ShowSharingMenu(path, isDirectory, false);
+                    }
+                }
+                else //Was already private and still is.
+                {
+                    this.elements.sharingMenu.unsavedChangesNotice.style.display = "none";
+                }
+            }
+        };
+
+        if (updateVisibility)
+        {
+            Main.FadeElement("block", this.elements.sharingMenu.container);
+        }
+    }
+
+    private async LoadDirectory(path: string, fromPopState: boolean): Promise<void>
     {
         const directoryResponse = await this.GetDirectory(path);
         if (typeof directoryResponse === "string")
@@ -46,7 +243,8 @@ class Directory
 
         //Update directory and URL.
         this.directory = directoryResponse.path;
-        document.title = `${directoryResponse.path[directoryResponse.path.length - 1]??"Directory"} | ${document.title.split("|").at(-1)}`;
+        const titleSplit = document.title.split("|");
+        document.title = `${directoryResponse.path[directoryResponse.path.length - 1]??"Directory"} | ${titleSplit[titleSplit.length - 1]}`;
         //Dont push to history if it is the first load or if we are coming from popstate.
         if (!this.firstLoad && !fromPopState)
         {
@@ -134,7 +332,7 @@ class Directory
         dateColumn.classList.add("dateColumn");
 
         const p3 = document.createElement("p");
-        p3.innerText = isDirectory ? '' : Directory.FormatUnix(file!.lastModified * 1000);
+        p3.innerText = isDirectory ? '' : Main.FormatUnix(file!.lastModified * 1000);
 
         dateColumn.appendChild(p3);
 
@@ -146,7 +344,7 @@ class Directory
         sizeColumn.classList.add("sizeColumn");
 
         const p4 = document.createElement("p");
-        p4.innerText = isDirectory ? "" : Directory.FormatBytes(file!.size);
+        p4.innerText = isDirectory ? "" : Main.FormatBytes(file!.size);
 
         sizeColumn.appendChild(p4);
         
@@ -163,7 +361,13 @@ class Directory
         {
             button = document.createElement("button");
             button.innerText = "Sharing";
-            // button.onclick = () => { this.ShowSharingDialog(file!.path); };
+            button.onclick = () =>
+            {
+                this.ShowSharingMenu(
+                    this.directory.join('/') + '/' + displayName,
+                    isDirectory
+                );
+            };
 
             optionsColumn.appendChild(button);
         }
@@ -171,14 +375,23 @@ class Directory
         row.appendChild(optionsColumn);
         //#endregion
 
-        if (isDirectory)
+        row.onclick = (e) =>
         {
-            row.onclick = (e) =>
+            //Make sure the user is not clicking on the share button.
+            if (e.target !== button)
             {
-                //Make sure the user is not clicking on the share button.
-                if (e.target !== button)
+                if (isDirectory)
                 {
                     this.LoadDirectory(this.directory.concat(displayName).join("/"), false);
+                }
+                else if (e.ctrlKey)
+                {
+                    window.open(Main.WEB_ROOT + "/view/file/" + this.directory.concat(displayName).join("/"));
+                }
+                else
+                {
+                    this.elements.preview.iframe.src = Main.WEB_ROOT + "/view/file/" + this.directory.concat(displayName).join("/");
+                    Main.FadeElement("block", this.elements.preview.container);
                 }
             }
         }
@@ -208,29 +421,70 @@ class Directory
             (directoryResponse.response as IDirectoryResponse);
     }
 
-    private static FormatUnix(unixTime: number): string
+    private async GetShareDetails(path: string, isDirectory: boolean): Promise<string | IShareStatus>
     {
-        //String format: DD/MM/YYYY HH:mm
-        const date = new Date(unixTime);
-        return `${date.getDate() < 10 ? "0" + date.getDate().toString() : date.getDate()}/${
-            (date.getMonth() + 1) < 10 ? "0" + date.getMonth().toString() : date.getMonth()}/${
-            date.getFullYear()} ${
-            date.getHours() < 10 ? "0" + date.getHours().toString() : date.getHours()}:${
-            date.getMinutes() < 10 ? "0" + date.getMinutes().toString() : date.getMinutes()
-        }`;
+        const directoryResponse = await Main.XHR<IShareStatus>(
+        {
+            url: `${Main.WEB_ROOT}/api/v1/${isDirectory ? "directory" : "file"}/`,
+            method: "POST",
+            data:
+            {
+                method: "get_share",
+                id: Main.RetreiveCache("uid"),
+                token: Main.RetreiveCache("token"),
+                path: path
+            },
+            headers:
+            {
+                "Content-Type": "application/x-www-form-urlencoded"
+            }
+        })
+        .catch((error: IXHRReject<IServerErrorResponse>) =>
+        {
+            return error;
+        });
+
+        return (directoryResponse.response as IServerErrorResponse).error !== undefined ?
+            (directoryResponse.response as IServerErrorResponse).error :
+            (directoryResponse.response as IShareStatus);
     }
 
-    public static FormatBytes(bytes: number, decimals = 2): string
+    private async SaveShareDetails(
+        method: "add" | "update" | "delete",
+        isDirectory: boolean,
+        data:
+        {
+            path?: string,
+            sid?: string,
+            share_type?: 0 | 1,
+            expiry_time?: number
+        } = {}
+    ): Promise<string | IShareResponse>
     {
-        if (bytes === 0) { return '0 Bytes'; }
+        const directoryResponse = await Main.XHR<IShareResponse>(
+        {
+            url: `${Main.WEB_ROOT}/api/v1/${isDirectory ? "directory" : "file"}/`,
+            method: "POST",
+            data:
+            {
+                method: `${method}_share`,
+                id: Main.RetreiveCache("uid"),
+                token: Main.RetreiveCache("token"),
+                ...data
+            },
+            headers:
+            {
+                "Content-Type": "application/x-www-form-urlencoded"
+            }
+        })
+        .catch((error: IXHRReject<IServerErrorResponse>) =>
+        {
+            return error;
+        });
 
-        var k = 1024;
-        var dm = decimals < 0 ? 0 : decimals;
-        var sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
-
-        var i = Math.floor(Math.log(bytes) / Math.log(k));
-
-        return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+        return (directoryResponse.response as IServerErrorResponse).error !== undefined ?
+            (directoryResponse.response as IServerErrorResponse).error :
+            (directoryResponse.response as IShareResponse);
     }
 }
 new Directory();
@@ -243,11 +497,26 @@ interface IDirectoryResponse
     files: IFile[];
 }
 
-interface IFile
+interface IShareStatus
+{
+    shared: boolean;
+    sid?: string;
+    share_type?: string;
+    expiry_time?: string;
+}
+
+interface IShareResponse
+{
+    sid?: string;
+}
+
+export interface IFile
 {
     name: string;
     extension?: string;
     size: number;
     lastModified: number;
     mimeType: string;
+    width?: number;
+    height?: number;
 }
