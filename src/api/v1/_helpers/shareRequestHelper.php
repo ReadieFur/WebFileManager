@@ -113,6 +113,47 @@ class ShareRequestHelper
         Request::SendResponse(200);
     }
 
+    public static function GetRoots(): never
+    {
+        if (
+            !isset(Request::Post()['id']) ||
+            !isset(Request::Post()['token'])
+        )
+        { Request::SendError(400, ErrorMessages::INVALID_PARAMETERS); }
+
+        $accountHelper = new AccountHelper();
+        $accountResult = $accountHelper->GetAccountDetails(
+            Request::Post()['id'],
+            Request::Post()['token'],
+            Request::Post()['id']
+        );
+        if ($accountResult === false || $accountResult->admin != 1)
+        { Request::SendError(401, ErrorMessages::INVALID_ACCOUNT_DATA); }
+
+        $pathsTable = new webfilemanager_paths(
+            true,
+            Config::Config()['database']['host'],
+            Config::Config()['database']['database'],
+            Config::Config()['database']['username'],
+            Config::Config()['database']['password']
+        );
+        $pathsResult = $pathsTable->Select(array());
+        if ($pathsResult === false)
+        { Request::SendError(500, ErrorMessages::DATABASE_ERROR); }
+
+        $response = new stdClass();
+        $response->paths = array();
+        foreach ($pathsResult as $path)
+        {
+            $response->paths[] = array(
+                'web_path' => $path->web_path,
+                'local_path' => $path->local_path
+            );
+        }
+        
+        Request::SendResponse(200, $response);
+    }
+
     public static function DeleteRoot(): never
     {
         if (

@@ -18,6 +18,8 @@ switch (Request::Post()['method'])
         ShareRequestHelper::AddRoot(true);
     case 'update_root':
         ShareRequestHelper::UpdateRoot(true);
+    case 'get_roots':
+        ShareRequestHelper::GetRoots();
     case 'delete_root':
         ShareRequestHelper::DeleteRoot();
     case 'add_share':
