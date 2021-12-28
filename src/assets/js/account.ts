@@ -36,6 +36,12 @@ export class Account
         };
     }
 
+    public static IsRootAdminAccount(uid: string): boolean
+    {
+        //We know the ID of the admin account because it is hardcoded in the database setup.
+        return uid === "61c51ce0ab3d0191283069";
+    }
+
     public static async CreateAcount(
         id: string,
         token: string,
@@ -59,9 +65,9 @@ export class Account
         id: string,
         token: string,
         uid: string,
-        old_password: string | null,
-        new_password: string | null,
-        admin: 0 | 1 | null
+        old_password: string,
+        new_password: string,
+        admin: 0 | 1 | ""
     ): Promise<IResult<object>>
     {
         return this.GetResult(await Account.Post(

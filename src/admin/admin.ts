@@ -181,7 +181,7 @@ class Admin
         {
             const account = accounts[i];
 
-            const isAdminAccount = account.username === "admin";
+            const isAdminAccount = Account.IsRootAdminAccount(account.uid);
 
             const tr = document.createElement("tr");
             tr.classList.add("listItem", "selectable");
@@ -426,7 +426,8 @@ class Admin
         }
         else
         {
-            if (/\S/.test(password) === true && password !== passwordConfirm)
+            const passwordIsEmpty = /\S/.test(password) === false;
+            if (!passwordIsEmpty && password !== passwordConfirm)
             {
                 Main.Alert("Passwords do not match.");
                 return;
@@ -436,9 +437,9 @@ class Admin
                 Main.RetreiveCache("uid")??"",
                 Main.RetreiveCache("token")??"",
                 this.elements.tabs.account.activeAccountID!,
-                null,
-                password,
-                admin
+                "",
+                !passwordIsEmpty ? password : "",
+                !Account.IsRootAdminAccount(this.elements.tabs.account.activeAccountID!) ? admin : ""
             );
             if (typeof accountResponse.error === "string")
             {

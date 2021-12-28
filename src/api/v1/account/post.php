@@ -70,9 +70,9 @@ function UpdateAccount(): never
         Request::Post()['id'],
         Request::Post()['token'],
         Request::Post()['uid'],
-        Request::Post()['old_password']??null,
-        Request::Post()['new_password']??null,
-        Request::Post()['admin']??null
+        Request::Post()['old_password']??'',
+        Request::Post()['new_password']??'',
+        Request::Post()['admin']??''
     );
     
     switch ($accountResult)

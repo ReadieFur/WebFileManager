@@ -76,7 +76,7 @@ class AccountHelper
             !AccountHelper::CheckID($id) ||
             !AccountHelper::CheckToken($token) ||
             !AccountHelper::CheckID($uid) ||
-            ($admin !== null && !AccountHelper::CheckAdmin($admin))
+            ($admin !== '' && !AccountHelper::CheckAdmin($admin))
         )
         { return 400; }
 
@@ -91,15 +91,15 @@ class AccountHelper
             $existingUsers === false ||
             empty($existingUsers) ||
             (
-                $admin !== null &&
+                $admin !== '' &&
                 $existingUsers[0]->username == 'admin' //Make sure the admin's account permissions cannot be changed.
             )
         ) { return 404; }
-        else if ($admin === null) { $admin = $existingUsers[0]->admin; }
+        else if ($admin === '') { $admin = $existingUsers[0]->admin; }
 
         $encryptedPassword = null;
-        if ($new_password != null && !AccountHelper::CheckPassword($new_password)) { return false; }
-        else if ($new_password != null)
+        if ($new_password != '' && !AccountHelper::CheckPassword($new_password)) { return false; }
+        else if ($new_password != '')
         {
             if (
                 $requestAccount->admin != 1 &&

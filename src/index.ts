@@ -162,7 +162,7 @@ class Index
             this.userID!,
             currentPassword,
             newPassword,
-            null
+            ""
         );
         if (updateResponse.error !== false)
         {

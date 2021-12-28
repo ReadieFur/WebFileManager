@@ -32,8 +32,8 @@ function GetDirectory(array $webPath, array $roots, array $path, bool $sharedPat
     if (is_dir($formattedPath))
     {
         // Logger::Log('Getting contents of directory: ' . $formattedPath, LogLevel::DEBUG);
-        $response->directories = array_values(array_filter(scandir($formattedPath), fn($dir) => is_dir($formattedPath . '/' . $dir) && $dir !== '.' && $dir !== '..'));
-        $files = array_filter(scandir($formattedPath), fn($file) => !is_dir($formattedPath . '/' . $file));
+        $response->directories = array_values(array_filter(scandir($formattedPath), fn($dir) => is_dir($formattedPath . '/' . $dir) && $dir !== '.' && $dir !== '..' && is_readable($formattedPath . '/' . $dir)));
+        $files = array_filter(scandir($formattedPath), fn($file) => !is_dir($formattedPath . '/' . $file) && is_readable($formattedPath . '/' . $file));
         $filesWithDetails = array();
         foreach ($files as $file)
         {

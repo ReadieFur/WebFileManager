@@ -83,9 +83,10 @@ class Request
         $requestURI = $_SERVER['REQUEST_URI'];
         $queryStringStartIndex = strpos($_SERVER['REQUEST_URI'], '?');
         if ($queryStringStartIndex !== false) { $requestURI = substr($_SERVER['REQUEST_URI'], 0, $queryStringStartIndex); }
+        $requestURIDecoded = urldecode($requestURI);
 
-        self::$URL = array_filter(explode('/', $requestURI), fn($part) => !ctype_space($part) && $part !== '');
-        self::$URL_STRIPPED_ROOT = array_filter(explode('/', str_replace(Config::Config()['site']['path'], '', $requestURI)), fn($part) => !ctype_space($part) && $part !== '');
+        self::$URL = array_filter(explode('/', $requestURIDecoded), fn($part) => !ctype_space($part) && $part !== '');
+        self::$URL_STRIPPED_ROOT = array_filter(explode('/', str_replace(Config::Config()['site']['path'], '', $requestURIDecoded)), fn($part) => !ctype_space($part) && $part !== '');
         self::$SERVER = $_SERVER;
         self::$SERVER['REQUEST_URI'] = $requestURI;
         self::$REQUEST_METHOD = RequestMethod::GetMethod(self::$SERVER['REQUEST_METHOD']);
@@ -94,7 +95,17 @@ class Request
         foreach ($_POST as $key => $value)
         {
             if (is_array($value)) { self::$POST[$key] = $value; }
-            else { self::$POST[$key] = urldecode($value); }
+            //Fix this sometimes double parsing and not parsing the data.
+            // else { self::$POST[$key] = urldecode($value); }
+            // else { self::$POST[$key] = $value; }
+            //Copilot
+            // else { self::$POST[$key] = urldecode(preg_replace('/%(?![\da-f]{2})/i', '', $value)); }
+            //https://stackoverflow.com/a/21206159
+            else
+            {
+                if (urlencode(urldecode($value)) === $value) { self::$POST[$key] = urldecode($value); }
+                else { self::$POST[$key] = $value; }
+            }
         }
         self::$FILES = $_FILES;
         self::$COOKIE = $_COOKIE;

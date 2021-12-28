@@ -20,7 +20,8 @@
     $ch = curl_init();
     curl_setopt($ch, CURLOPT_URL, Request::Server()['SERVER_NAME'] . Config::Config()['site']['path'] . '/api/v1/file/' . $pathImploded . $queryString . '&details');
     curl_setopt($ch, CURLOPT_POST, false); // Use GET
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true); //Follow redirects
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true); //Return the response as a string
     $fileDataResponse = curl_exec($ch);
     curl_close($ch);
 
@@ -65,7 +66,8 @@
                     $ch = curl_init();
                     curl_setopt($ch, CURLOPT_URL, Request::Server()['SERVER_NAME'] . $thumbnailPath . '&details');
                     curl_setopt($ch, CURLOPT_POST, false); // Use GET
-                    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true); //Follow redirects
+                    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true); //Return the response as a string
                     $thumbnailDataResponse = curl_exec($ch);
                     curl_close($ch);
 

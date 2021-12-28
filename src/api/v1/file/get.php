@@ -53,7 +53,7 @@ function GetFileDetails(string $path): never
 function GetFile(array $path): never
 {
     $formattedPath = '/' . implode('/', $path);
-    if (file_exists($formattedPath) && is_file($formattedPath))
+    if (file_exists($formattedPath) && is_file($formattedPath) && is_readable($formattedPath))
     {
         // Logger::Log('Getting contents of file: ' . $formattedPath, LogLevel::DEBUG);
         if (array_key_exists('details', Request::Get()))
@@ -71,7 +71,7 @@ function GetFile(array $path): never
     {
         //I can reuse the encryption function here to get a random name for the file but have it still be reversible (also this encryption method produces a string which is valid for a file name).
         $thumbnailPath = __DIR__ . '/../../../_storage/thumbnails/' . str_replace('/', '_', AccountHelper::Crypt(true, basename($formattedPath), $formattedPath)) . '.thumbnail.png';
-        if (file_exists($thumbnailPath) && is_file($thumbnailPath))
+        if (file_exists($thumbnailPath) && is_file($thumbnailPath) && is_readable($formattedPath))
         {
             if (array_key_exists('details', Request::Get()))
             {
