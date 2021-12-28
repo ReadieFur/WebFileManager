@@ -18,7 +18,7 @@
 
     //https://www.php.net/curl
     $ch = curl_init();
-    curl_setopt($ch, CURLOPT_URL, Request::Server()['SERVER_NAME'] . Config::Config()['site']['path'] . '/api/v1/file/' . $pathImploded . $queryString . '&details');
+    curl_setopt($ch, CURLOPT_URL, Request::Server()['SERVER_NAME'] . $filePath . '&details');
     curl_setopt($ch, CURLOPT_POST, false); // Use GET
     curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true); //Follow redirects
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true); //Return the response as a string
@@ -40,22 +40,22 @@
         else
         {
             $phpData->data = $fileDataResponse;
+            $phpData->data['url'] = $filePath;
         }
     }
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <?php echo Main::ExecuteAndRead(__DIR__ . '/../../assets/php/head.php'); ?>
     <link rel="stylesheet" type="text/css" href="<?php echo Config::Config()['site']['path']; ?>/view/file/file.css"/>
     <script src="<?php echo Config::Config()['site']['path']; ?>/view/file/file.js" type="module" defer></script>
-    <script>var PHP_DATA = '<?php echo json_encode($phpData); ?>';</script>
     <?php
         if (!isset($phpData->error))
         {
             $mimeTypeExploded = explode('/', $phpData->data['mimeType']);
             
             //Values set here to be used in head.php
+            $title = $phpData->data['name'] . ($phpData->data['extension'] ? '.' . $phpData->data['extension'] : '');
             $ogType = $mimeTypeExploded[0] . '.' . $mimeTypeExploded[1];
 
             switch ($mimeTypeExploded[0])
@@ -80,13 +80,14 @@
                     {
                         $thumbnailDataResponse = json_decode($thumbnailDataResponse, true);
 
-                        if (curl_getinfo($ch, CURLINFO_HTTP_CODE) !== 200 || explode('/', $thumbnailData->data['mimeType'])[0] !== 'image')
+                        if (curl_getinfo($ch, CURLINFO_HTTP_CODE) !== 200 || explode('/', $thumbnailDataResponse['mimeType'])[0] !== 'image')
                         {
                             $thumbnailData->error = $thumbnailDataResponse['error']??ErrorMessages::UNKNOWN_ERROR;
                         }
                         else
                         {
                             $thumbnailData->data = $thumbnailDataResponse;
+                            $phpData->data['thumbnail'] = $thumbnailData->data;
                         }
                     }
 
@@ -102,7 +103,6 @@
                         <?php
                     }
                     ?>
-                        <!-- <meta property="og:type" content="<?php echo $ogType; ?>"> -->
                         <meta property="og:updated_time" content="<?php echo gmdate("Y-m-d\TH:i:s\Z", $phpData->data['lastModified']); ?>">
                         <meta property="og:video" content="<?php echo $filePath; ?>">
                         <meta property="og:video:url" content="<?php echo $filePath; ?>">
@@ -118,7 +118,6 @@
                     break;
                 case 'image':
                     ?>
-                        <!-- <meta property="og:type" content="<?php echo $ogType; ?>"> -->
                         <meta property="og:image" content="<?php echo $filePath; ?>">
                         <meta property="og:image:secure_url" content="<?php echo $filePath; ?>">
                         <meta property="og:image:type" content="<?php echo $phpData->data['mimeType']; ?>">
@@ -146,6 +145,8 @@
             }
         }
     ?>
+    <script>var PHP_DATA = '<?php echo json_encode($phpData); ?>';</script>
+    <?php echo Main::ExecuteAndRead(__DIR__ . '/../../assets/php/head.php'); ?>
 </head>
 <header id="header">
     <?php echo Main::ExecuteAndRead(__DIR__ . '/../../assets/php/header.php'); ?>
@@ -164,36 +165,14 @@
                     <hr>
                     <br>
                 </section>
-                <span id="contentContainer">
-                    <?php
-                        switch ($mimeTypeExploded[0])
-                        {
-                            case 'video':
-                                ?>
-                                    <video controls src="<?php echo $filePath; ?>"></video>
-                                <?php
-                                break;
-                            case 'image':
-                                ?>
-                                    <img src="<?php echo $filePath; ?>">
-                                <?php
-                                break;
-                            case 'audio':
-                                ?>
-                                    <audio controls src="<?php echo $filePath; ?>"></audio>
-                                <?php
-                                break;
-                            case 'text':
-                                ?>
-                                    <!-- Set in the TS file. -->
-                                    <!-- <pre></pre> -->
-                                <?php
-                                break;
-                            default:
-                                break;
-                        }
-                    ?>
-                </span>
+                <span id="contentContainer"></span>
+                <h4 id="notice" class="center">Please make sure JavaScript is enabled.</h3>
+            <?php
+        }
+        else
+        {
+            ?>
+                <h4 class="center">Unable to get file.</h4>
             <?php
         }
     ?>

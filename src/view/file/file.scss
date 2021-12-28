@@ -73,8 +73,14 @@ body
             overflow-y: auto;
             background-color: rgba(var(--backgroundAltColour), 1);
             padding: 15px 20px;
+            border-radius: 5px;
             // white-space: pre-wrap;
             // word-wrap: break-word;
         }
+    }
+
+    #notice
+    {
+        user-select: none;
     }
 }

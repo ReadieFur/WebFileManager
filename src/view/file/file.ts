@@ -8,6 +8,7 @@ class File
     private static PHP_DATA: IPHP_DATA;
 
     private fileName?: HTMLHeadingElement;
+    private notice?: HTMLHeadingElement;
     private contentContainer?: HTMLSpanElement;
 
     constructor()
@@ -28,7 +29,11 @@ class File
         }
 
         this.fileName = Main.GetElement("#fileName");
+        this.notice = Main.GetElement("#notice");
         this.contentContainer = Main.GetElement("#contentContainer");
+
+        this.notice!.style.display = "block";
+        this.notice!.innerText = "Loading...";
 
         //While I could've set the size in PHP, to save rewriting the same code, I'll do it here.
         this.fileName.innerText += " | " + Main.FormatBytes(File.PHP_DATA.data!.size);
@@ -43,12 +48,26 @@ class File
 
         switch (File.PHP_DATA.data!.mimeType.split("/")[0])
         {
-            // case "video":
-            //     break;
-            // case "image":
-            //     break;
-            // case "audio":
-            //     break;
+            case "video":
+                const video = document.createElement("video");
+                video.addEventListener("loadeddata", () => { this.notice!.style.display = "none"; });
+                video.controls = true;
+                video.src = File.PHP_DATA.data!.url;
+                this.contentContainer!.appendChild(video);
+                break;
+            case "image":
+                const image = document.createElement("img");
+                image.addEventListener("loadeddata", () => { this.notice!.style.display = "none"; });
+                image.src = File.PHP_DATA.data!.url;
+                this.contentContainer!.appendChild(image);
+                break;
+            case "audio":
+                const audio = document.createElement("audio");
+                audio.addEventListener("loadeddata", () => { this.notice!.style.display = "none"; });
+                audio.controls = true;
+                audio.src = File.PHP_DATA.data!.url;
+                this.contentContainer!.appendChild(audio);
+                break;
             case "text":
                 Main.XHR<string>(
                 {
@@ -67,9 +86,11 @@ class File
                     pre.innerText = result.response;
                     pre.classList.add("light");
                     this.contentContainer!.appendChild(pre);
-                }).catch(err => { Main.Alert("Error loading content."); });
+                    this.notice!.style.display = "none";
+                }).catch(() => { Main.Alert("Error loading content."); });
                 break;
             default:
+                this.notice!.innerText = "No preview available.";
                 break;
         }
     }
@@ -79,5 +100,11 @@ new File();
 interface IPHP_DATA
 {
     error?: string;
-    data?: IFile;
+    data?: IFileExtended;
+}
+
+interface IFileExtended extends IFile
+{
+    url: string;
+    thumbnail?: IFile;
 }
