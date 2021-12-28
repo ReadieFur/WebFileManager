@@ -50,20 +50,20 @@ class File
         {
             case "video":
                 const video = document.createElement("video");
-                video.addEventListener("loadeddata", () => { this.notice!.style.display = "none"; });
+                video.onloadeddata = () => { this.notice!.style.display = "none"; };
                 video.controls = true;
                 video.src = File.PHP_DATA.data!.url;
                 this.contentContainer!.appendChild(video);
                 break;
             case "image":
                 const image = document.createElement("img");
-                image.addEventListener("loadeddata", () => { this.notice!.style.display = "none"; });
+                image.onload = () => { this.notice!.style.display = "none"; };
                 image.src = File.PHP_DATA.data!.url;
                 this.contentContainer!.appendChild(image);
                 break;
             case "audio":
                 const audio = document.createElement("audio");
-                audio.addEventListener("loadeddata", () => { this.notice!.style.display = "none"; });
+                audio.onload = () => { this.notice!.style.display = "none"; };
                 audio.controls = true;
                 audio.src = File.PHP_DATA.data!.url;
                 this.contentContainer!.appendChild(audio);

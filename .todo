@@ -8,6 +8,7 @@ Todo:
     ☐ Speed improvements.
     ☐ Fix errors that display when updating a password, though it was likley succecssful the reload causes an error because the token is now invalid.
     ☐ Have shared directories use the folder name in the title and meta tags instead of the share ID.
+    ☐ Add an option for the user to limit the download speed of files, this could be useful if they are running the program on a personal network and they don't want this program to saturate their bandwidth.
 
 Done:
     ✔ Fix file embeds for shared files. @done(21-12-28 16:02)
