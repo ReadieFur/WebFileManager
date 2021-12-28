@@ -67,7 +67,7 @@ function GetFile(array $path): never
             // exit; //This is called from the end function which is called from the begin function above.
         }
     }
-    else if (str_ends_with(basename($formattedPath), '.thumbnail.png'))
+    else if (basename($formattedPath) !== '.thumbnail.png' && str_ends_with(basename($formattedPath), '.thumbnail.png'))
     {
         //I can reuse the encryption function here to get a random name for the file but have it still be reversible (also this encryption method produces a string which is valid for a file name).
         $thumbnailPath = __DIR__ . '/../../../_storage/thumbnails/' . str_replace('/', '_', AccountHelper::Crypt(true, basename($formattedPath), $formattedPath)) . '.thumbnail.png';
@@ -185,7 +185,7 @@ foreach ($pathsResponse as $path)
 $path = array_slice(Request::URLStrippedRoot(), 3); //3 for the .../api/v1/file/ prefix.
 if (!empty($path))
 {
-    if (array_key_exists($path[0], $roots))
+    if (array_key_exists($path[0], $roots)) //Private file
     {
         if (
             !isset(Request::Get()['uid']) ||
@@ -207,8 +207,28 @@ if (!empty($path))
         );
         GetFile($searchPath);
     }
-    else
+    else //Check for shared file
     {
+        //Remove the file extension from the share ID if there is one.
+        if (count($path) === 1)
+        {
+            $fileName = $path[0];
+            $targetingThumbnail = false;
+            if ($fileName !== '.thumbnail.png' && str_ends_with($fileName, '.thumbnail.png'))
+            {
+                $fileName = str_replace('.thumbnail.png', '', $fileName);
+                $targetingThumbnail = true;
+            }
+            $fileNameExploded = explode('.', $fileName);
+            if ($fileNameExploded !== false && !empty($fileNameExploded))
+            {
+                //Remove the last part of the file name.
+                array_pop($fileNameExploded);
+                $fileName = implode('.', $fileNameExploded);
+            }
+            $path[0] = $fileName;
+        }
+
         $sharesTable = new webfilemanager_shares(
             true,
             Config::Config()['database']['host'],
@@ -244,6 +264,7 @@ if (!empty($path))
                     array_filter(explode('/', $share->path), fn($part) => !ctype_space($part) && $part !== ''),
                     array_filter(array_slice($path, 1), fn($part) => !ctype_space($part) && $part !== '')
                 );
+                if ($targetingThumbnail) { $searchPath[count($searchPath) - 1] .= '.thumbnail.png'; }
                 break;
             }
         }
