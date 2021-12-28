@@ -279,6 +279,14 @@ function MiscSetup()
 {
     echo '===Misc setup===' . PHP_EOL;
     $hadErrors = false;
+    $config = json_decode(file_get_contents(CONFIG_FILE_PATH), true);
+
+    if (!isset($config['log']['path']))
+    {
+        touch($config['log']['path']);
+        chown($config['log']['path'], 'www-data');
+        chgrp($config['log']['path'], 'www-data');
+    }
 
     echo 'Creating \'_storage\' directory if it does not exist...' . PHP_EOL;
     if (!file_exists(ROOT_DIR . '/_storage'))
