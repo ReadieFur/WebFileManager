@@ -104,6 +104,7 @@ class Request
             else
             {
                 if (urlencode(urldecode($value)) === $value) { self::$POST[$key] = urldecode($value); }
+                else if (rawurlencode(rawurldecode($value)) === $value) { self::$POST[$key] = rawurldecode($value); }
                 else { self::$POST[$key] = $value; }
             }
         }

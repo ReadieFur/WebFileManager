@@ -5,7 +5,7 @@
     global $description;
     global $ogType;
 
-    $dirName = ltrim(ucwords(str_replace("_", " ", basename($_SERVER['REQUEST_URI']))), '/');
+    $dirName = ltrim(ucwords(str_replace("_", " ", urldecode(basename($_SERVER['REQUEST_URI'])))), '/');
 
     $_title = ($title !== null ? $title : $dirName) . ' | ' . Config::Config()['site']['name'];
     $_description = $description !== null ? $description : $dirName;
@@ -34,4 +34,3 @@
     var ACCENT = "<?php echo Config::Config()['site']['theme']['accent']; ?>";
 </script>
 <style id="themeColours"></style>
-<div id="tooltipContainer"><small id="tooltipText"></small></div>

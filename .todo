@@ -1,7 +1,14 @@
-☐ Check if a config already exists. If it does, set the default values to the existing values.
-☐ Make the database storage more advanced so that files can be shared between users and groups (currently the program is a single user login, this is to make the file sharing easier for the time being).
-☐ Add more share types, e.g. with password.
-☐ Delete cached thumbnails after a certain time.
-☐ Return share status on files and directories.
-☐ Fix the way the view file page gets file data on the server side.
-☐ Fix file embeds for shared files.
+Todo:
+    ☐ Check if a config already exists. If it does, set the default values to the existing values.
+    ☐ Make the database storage more advanced so that files can be shared between users and groups.
+    ☐ Add more share types, e.g. with password.
+    ☐ Delete cached thumbnails after a certain time.
+    ☐ Return share status on files and directories.
+    ☐ Fix the way the view file page gets file data on the server side.
+    ☐ Speed improvements.
+    ☐ Fix errors that display when updating a password, though it was likley succecssful the reload causes an error because the token is now invalid.
+    ☐ Have shared directories use the folder name in the title and meta tags instead of the share ID.
+
+Done:
+    ✔ Fix file embeds for shared files. @done(21-12-28 16:02)
+    ✔ Fix acccessing files through shared directories. (I had a problem here but it seemed to have fixed itself. Hopefully it dosen't come back). @done(21-12-28 18:16)

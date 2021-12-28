@@ -89,6 +89,7 @@
                 </tr> -->
             </tbody>
         </table>
+        <p id="loadingMessage" class="center x">Loading...</p>
     </section>
 </body>
 <footer id="footer">

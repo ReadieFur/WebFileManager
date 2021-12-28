@@ -30,7 +30,8 @@ class Directory
             buttonContainer: HTMLDivElement,
             sharingLink: HTMLButtonElement,
             saveButton: HTMLButtonElement
-        }
+        },
+        loadingMessage: HTMLParagraphElement
     };
 
     constructor()
@@ -44,28 +45,29 @@ class Directory
             directoryListing: Main.GetElement("#directoryListing"),
             preview:
             {
-                container: Main.ThrowIfNullOrUndefined(document.querySelector("#filePreviewContainer")),
-                background: Main.ThrowIfNullOrUndefined(document.querySelector("#filePreviewContainer > .background")),
-                iframe: Main.ThrowIfNullOrUndefined(document.querySelector("#filePreview"))
+                container: Main.GetElement("#filePreviewContainer"),
+                background: Main.GetElement("#filePreviewContainer > .background"),
+                iframe: Main.GetElement("#filePreview")
             },
             sharingMenu:
             {
-                container: Main.ThrowIfNullOrUndefined(document.querySelector("#sharingMenu")),
-                background: Main.ThrowIfNullOrUndefined(document.querySelector("#sharingMenu > .background")),
-                sharingTypes: Main.ThrowIfNullOrUndefined(document.querySelector("#sharingTypes")),
+                container: Main.GetElement("#sharingMenu"),
+                background: Main.GetElement("#sharingMenu > .background"),
+                sharingTypes: Main.GetElement("#sharingTypes"),
                 subMenus:
                 {
                     publicOptions:
                     {
-                        container: Main.ThrowIfNullOrUndefined(document.querySelector("#publicSharing")),
-                        publicSharingTimeInput: Main.ThrowIfNullOrUndefined(document.querySelector("#publicExpiryTime"))
+                        container: Main.GetElement("#publicSharing"),
+                        publicSharingTimeInput: Main.GetElement("#publicExpiryTime")
                     }
                 },
-                unsavedChangesNotice: Main.ThrowIfNullOrUndefined(document.querySelector("#unsavedSharingChangesNotice")),
-                buttonContainer: Main.ThrowIfNullOrUndefined(document.querySelector("#sharingMenu .joinButtons")),
-                sharingLink: Main.ThrowIfNullOrUndefined(document.querySelector("#sharingLink")),
-                saveButton: Main.ThrowIfNullOrUndefined(document.querySelector("#saveSharing"))
-            }
+                unsavedChangesNotice: Main.GetElement("#unsavedSharingChangesNotice"),
+                buttonContainer: Main.GetElement("#sharingMenu .joinButtons"),
+                sharingLink: Main.GetElement("#sharingLink"),
+                saveButton: Main.GetElement("#saveSharing")
+            },
+            loadingMessage: Main.GetElement("#loadingMessage")
         };
 
         this.elements.preview.background.addEventListener("click", () =>
@@ -116,6 +118,7 @@ class Directory
     private async ShowSharingMenu(path: string, isDirectory: boolean, updateVisibility: boolean = true): Promise<void>
     {
         if (path.startsWith("/")) { path = path.substring(1); }
+        const pathSplit = path.split("/");
 
         const shareDetailsResponse = await this.GetShareDetails(path, isDirectory);
         if (typeof shareDetailsResponse === "string")
@@ -136,7 +139,12 @@ class Directory
                     window.location.origin +
                     Main.WEB_ROOT +
                     `/view/${isDirectory ? "directory" : "file"}/` +
-                    shareDetailsResponse.sid!
+                    shareDetailsResponse.sid! +
+                    (
+                        !isDirectory ?
+                        pathSplit[pathSplit.length - 1].substring(pathSplit[pathSplit.length - 1].lastIndexOf(".")) :
+                        ""
+                    )
                 );
             };
             this.elements.sharingMenu.buttonContainer.classList.add("joinButtons");
@@ -234,12 +242,23 @@ class Directory
 
     private async LoadDirectory(path: string, fromPopState: boolean): Promise<void>
     {
+        this.elements.directoryListing.innerHTML = "";
+        this.elements.loadingMessage.style.display = "block";
+
         const directoryResponse = await this.GetDirectory(path);
         if (typeof directoryResponse === "string")
         {
+            this.elements.loadingMessage.style.display = "none";
             Main.Alert(Main.GetErrorMessage(directoryResponse));
+            //If the user is trying to load a directory that doesn't exist.
+            //Then go back to the directory they were in before unless they were in the root directory or they were loading from a direct link.
+            if (this.directory.length > 0) { this.LoadDirectory(this.directory.join("/"), false); }
             return;
         }
+
+        //An odd bug was occuring where I would get some duplicated entries from above but I am unsure why, so I just clear the table again here.
+        this.elements.directoryListing.innerHTML = "";
+        this.elements.loadingMessage.style.display = "none";
 
         //Update directory and URL.
         this.directory = directoryResponse.path;
@@ -251,11 +270,13 @@ class Directory
             window.history.pushState(null, "", Main.WEB_ROOT + "/view/directory/" + this.directory.join("/"));
         }
         this.firstLoad = false;
-        
-        //Clear the directory listing.
-        this.elements.directoryListing.innerHTML = "";
 
-        const isRootDirectory = directoryResponse.path.length === 0 || directoryResponse.sharedPath;
+        console.log(
+            directoryResponse,
+            directoryResponse.path.length,
+            directoryResponse.sharedPath
+        );
+        const isRootDirectory = directoryResponse.path.length === 0 || (directoryResponse.sharedPath && directoryResponse.path.length === 1);
         if (!isRootDirectory)
         {
             //Add the parent directory link.
@@ -365,7 +386,7 @@ class Directory
             button.onclick = () =>
             {
                 this.ShowSharingMenu(
-                    this.directory.join('/') + '/' + displayName,
+                    this.directory.concat(displayName).join("/"),
                     isDirectory
                 );
             };
