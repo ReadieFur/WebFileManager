@@ -18,7 +18,7 @@
 
     //https://www.php.net/curl
     $ch = curl_init();
-    curl_setopt($ch, CURLOPT_URL, Request::Server()['SERVER_NAME'] . $filePath . '&details');
+    curl_setopt($ch, CURLOPT_URL, Request::Server()['REQUEST_SCHEME'] . '://' . Request::Server()['SERVER_NAME'] . $filePath . '&details');
     curl_setopt($ch, CURLOPT_POST, false); // Use GET
     curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true); //Follow redirects
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true); //Return the response as a string
@@ -64,7 +64,7 @@
                     $thumbnailPath = Config::Config()['site']['path'] . '/api/v1/file/' . $pathImploded . '.thumbnail.png' . $queryString;
 
                     $ch = curl_init();
-                    curl_setopt($ch, CURLOPT_URL, Request::Server()['SERVER_NAME'] . $thumbnailPath . '&details');
+                    curl_setopt($ch, CURLOPT_URL, Request::Server()['REQUEST_SCHEME'] . '://' . Request::Server()['SERVER_NAME'] . $thumbnailPath . '&details');
                     curl_setopt($ch, CURLOPT_POST, false); // Use GET
                     curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true); //Follow redirects
                     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true); //Return the response as a string
