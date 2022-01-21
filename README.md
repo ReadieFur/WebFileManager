@@ -149,7 +149,7 @@ API V1 supports the following requests:
 **Documentation is in progress**
 
 ## Current version
-[1.1.0](https://github.com/kOFReadie/WebFileManager/releases/tag/1.1.0)
+[1.1.1](https://github.com/kOFReadie/WebFileManager/releases/tag/1.1.1)
 
 ## Contact
 If you have any questions, please contact me on Discord (Readie#6594) or GitHub. If your inquiry is issue or feature related, please create an issue on GitHub.

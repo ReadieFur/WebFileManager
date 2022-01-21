@@ -1,4 +1,4 @@
-import { Main, EErrorMessages, IXHRReject, IServerErrorResponse } from "../../assets/js/main.js";
+import { Main, EErrorMessages, IXHRReject, IServerErrorResponse, Dictionary } from "../../assets/js/main.js";
 import { IFile } from "../directory/directory.js";
 
 declare var PHP_DATA: string;
@@ -160,52 +160,61 @@ class File
 
     private LoadContent(fileData: IFileExtended): void
     {
-        //While I could've set the size in PHP, to save rewriting the same code, I'll do it here.
+        const urlParamsStartIndex = fileData.url.indexOf("?");
+        const url = fileData.url.substring(0, urlParamsStartIndex);
+        const params = new URLSearchParams(fileData.url.substring(urlParamsStartIndex + 1));
+
         this.fileName.innerText = `${fileData.name}${fileData.extension !== undefined ? "." + fileData.extension : ""} | ${Main.FormatBytes(fileData.size)}`;
-        this.downloadButton.href = fileData.url + "?download";
+        params.set("download", "true");
+        this.downloadButton.href = url + "?" + params.toString();
+        params.delete("download"); //Clear it as it should've only been used for the above.
 
         switch (fileData.mimeType.split("/")[0])
         {
             case "video":
                 const video = document.createElement("video");
-                video.onloadeddata = () => { this.notice!.style.display = "none"; };
+                video.onloadeddata = () => { this.notice.style.display = "none"; };
+                video.onerror = () => { this.notice.innerText = "Error loading content."; };
                 video.controls = true;
                 video.src = fileData.url;
                 this.contentContainer.appendChild(video);
                 break;
             case "image":
                 const image = document.createElement("img");
-                image.onload = () => { this.notice!.style.display = "none"; };
+                image.onload = () => { this.notice.style.display = "none"; };
+                image.onerror = () => { this.notice.innerText = "Error loading content."; };
                 image.src = fileData.url;
                 this.contentContainer.appendChild(image);
                 break;
             case "audio":
                 const audio = document.createElement("audio");
-                audio.onload = () => { this.notice!.style.display = "none"; };
+                audio.onload = () => { this.notice.style.display = "none"; };
+                audio.onerror = () => { this.notice.innerText = "Error loading content."; };
                 audio.controls = true;
                 audio.src = fileData.url;
                 this.contentContainer.appendChild(audio);
                 break;
             case "text":
+                const paramsSplit: Dictionary<string> = {};
+                params.forEach((value, key) => { paramsSplit[key] = value; });
                 Main.XHR<string>(
                 {
-                    url: fileData.url,
+                    url: url,
                     method: "GET",
-                    data:
-                    {
-                        uid: Main.RetreiveCache("uid"),
-                        token: Main.RetreiveCache("token")
-                    },
+                    data: paramsSplit,
                     responseType: "text"
                 })
-                .then((result) =>
-                {
-                    var pre = document.createElement("pre");
-                    pre.innerText = result.response;
-                    pre.classList.add("light");
-                    this.contentContainer.appendChild(pre);
-                    this.notice.style.display = "none";
-                }).catch(() => { Main.Alert("Error loading content."); });
+                .then(
+                    (result) =>
+                    {
+                        var pre = document.createElement("pre");
+                        pre.innerText = result.response;
+                        pre.classList.add("light");
+                        this.contentContainer.appendChild(pre);
+                        this.notice.style.display = "none";
+                    },
+                    () => { this.notice.innerText = "Error loading content."; }
+                );
                 break;
             default:
                 this.notice.innerText = "No preview available.";
