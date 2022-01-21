@@ -107,7 +107,7 @@ Files can be shared to the public with or without an expiry date.
 To share a file, navigate to the `Files` tab and click the share button on the file or folder you wish to share.  
 **Note:** The root folders cannot be shared.  
 When sharing a file or folder, you can specify choose to add an expiry date to the share.  
-To access the shared file or folder, copy the link from the sharing menu and paste it into the address bar of your browser, the page has been designed so that the parent folders of the shared file or folder will not be exposed to the public.
+To access the shared file or folder, copy the link from the sharing menu and paste it into the address bar of your browser, the page has been designed so that the parent folders of the shared file or folder will not be exposed to the public.  
 **Optional features:**
 - Sharing files with google users, please read [here](https://github.com/kOFReadie/WebFileManager/releases/tag/1.1.0) for more information.
 
@@ -149,7 +149,7 @@ API V1 supports the following requests:
 **Documentation is in progress**
 
 ## Current version
-1.1.0
+[1.1.0](https://github.com/kOFReadie/WebFileManager/releases/tag/1.1.0)
 
 ## Contact
 If you have any questions, please contact me on Discord (Readie#6594) or GitHub. If your inquiry is issue or feature related, please create an issue on GitHub.
