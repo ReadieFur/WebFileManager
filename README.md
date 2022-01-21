@@ -108,6 +108,8 @@ To share a file, navigate to the `Files` tab and click the share button on the f
 **Note:** The root folders cannot be shared.  
 When sharing a file or folder, you can specify choose to add an expiry date to the share.  
 To access the shared file or folder, copy the link from the sharing menu and paste it into the address bar of your browser, the page has been designed so that the parent folders of the shared file or folder will not be exposed to the public.
+**Optional features:**
+- Sharing files with google users, please read [here](https://github.com/kOFReadie/WebFileManager/releases/tag/1.1.0) for more information.
 
 ## Plans for future updates
 - Add support for creating, editing and deleting files
