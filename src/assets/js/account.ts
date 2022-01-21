@@ -1,7 +1,17 @@
-import { Main, Dictionary, IXHRResolve, IXHRReject, IServerErrorResponse } from "./main.js";
+import { Main, Dictionary, IXHRResolve, IXHRReject, IServerErrorResponse, EErrorMessages } from "./main.js";
 
 export class Account
 {
+    private static GAPI: {
+        loaded: boolean;
+        loading: boolean;
+        clientID: string | null;
+    } = {
+        loaded: false,
+        loading: false,
+        clientID: null
+    };
+
     private static Post<T>(data: Dictionary<any>): Promise<IXHRResolve<T> | IXHRReject<IServerErrorResponse>>
     {
         return Main.XHR<T>(
@@ -20,7 +30,7 @@ export class Account
         });
     }
 
-    private static GetResult<T>(xhrResponse: IXHRResolve<any> | IXHRReject<IServerErrorResponse>): IResult<T>
+    public static GetResult<T>(xhrResponse: IXHRResolve<any> | IXHRReject<IServerErrorResponse>): IResult<T>
     {
         if ((xhrResponse as IXHRReject<IServerErrorResponse>).error !== undefined)
         {
@@ -38,7 +48,7 @@ export class Account
 
     public static IsRootAdminAccount(uid: string): boolean
     {
-        //We know the ID of the admin account because it is hardcoded in the database setup.
+        //We know the ID of the admin account because it is hardcoded in the database setup, I will likley change this in the future though.
         return uid === "61c51ce0ab3d0191283069";
     }
 

@@ -201,9 +201,23 @@
             margin-top: 0;
         }
     }
+
+    tr
+    {
+        width: 99%; //Easier to do this than change the padding on some elements.
+        display: inline-table;
+    }
 }
 
-#loadingMessage
+// #loadingMessage
+// {
+//     display: none;
+// }
+
+#googleInviteList > li
 {
-    display: none;
+    &:hover
+    {
+        color: red;
+    }
 }

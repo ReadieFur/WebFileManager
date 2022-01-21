@@ -28,6 +28,8 @@ switch (Request::Post()['method'])
         ShareRequestHelper::UpdateShare(true);
     case 'get_share':
         ShareRequestHelper::GetShare(true);
+    case 'get_share_by_id':
+        ShareRequestHelper::GetShareById(true);
     case 'delete_share':
         ShareRequestHelper::DeleteShare();
     default:

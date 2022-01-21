@@ -20,5 +20,8 @@
 			"dom.iterable",
 			"esnext"
 		]
-	}
+	},
+	"exclude": [
+		"_assets/libs/vendor/**" //I suspect this was making the compilier really slow as it was trying to index this folder.
+	]
 }

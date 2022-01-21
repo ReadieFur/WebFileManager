@@ -152,7 +152,7 @@
     <?php echo Main::ExecuteAndRead(__DIR__ . '/../../assets/php/header.php'); ?>
 </header>
 <body>
-    <?php
+    <!-- <?php
         if (!isset($phpData->error))
         {
             $mimeTypeExploded = explode('/', $phpData->data['mimeType']);
@@ -175,7 +175,7 @@
                 <h4 class="center">Unable to get file.</h4>
             <?php
         }
-    ?>
+    ?> -->
 </body>
 <footer id="footer">
     <?php echo Main::ExecuteAndRead(__DIR__ . '/../../assets/php/footer.php'); ?>

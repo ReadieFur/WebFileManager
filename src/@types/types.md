@@ -1,0 +1,1 @@
+- [GAPI](https://raw.githubusercontent.com/DefinitelyTyped/DefinitelyTyped/master/types/gapi.auth2/index.d.ts)

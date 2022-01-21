@@ -24,19 +24,35 @@
             <form>
                 <select id="sharingTypes">
                     <option value="private">Private</option>
+                    <option value="google_invite">Google Invite</option>
                     <option value="public">Public</option>
                 </select>
                 <table>
-                    <!--There are no options for public sharing-->
-                    <tbody id="publicSharing">
+                    <tbody id="expiryTimeContainer">
                         <tr>
                             <td>
                                 <p>Expiry Date:</p>
-                                <input type="datetime-local" id="publicExpiryTime">
+                                <input type="datetime-local" id="expiryTime">
                                 <br><br>
                             </td>
                         </tr>
                     </tbody>
+                    <!--There are no options for private sharing-->
+                    <tbody id="googleInviteSharing">
+                        <tr>
+                            <td>
+                                <p>Add User:</p>
+                                <input type="text" id="googleInviteUser" placeholder="user@gmail.com" minlength="6" maxlength="40">
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <p>Shared with:</p>
+                                <ul id="googleInviteList"></ul>
+                            </td>
+                        </tr>
+                    </tbody>
+                    <!--There are no other options public sharing aside from the expiry date section above-->
                 </table>
             </form>
             <p id="unsavedSharingChangesNotice" class="light">You have unsaved changes!</p>

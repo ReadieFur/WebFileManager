@@ -72,19 +72,28 @@ function PopulateConfig(object $config, array $template)
                     //Message format: "{description} [{default}] ({required}): "
                     $userInput = readline(
                         $value['description'] .
-                        ($defaultIsNull ? '' : ' [' . $value['default'] . ']') .
+                        // ($defaultIsNull && ($value['type'] == 'string' && !$value['required']) ? '' : ' [' . $value['default'] . ']') .
+                        ($defaultIsNull && $value['required'] ? '' : ' [' . $value['default'] . ']') .
                         ($defaultIsNull && $value['required'] ? ' (required)' : '') .
                         ': '
                     );
-                    if ($value['required'] && ($userInput == '' || ctype_space($userInput)))
+                    $userInputType = GetTypeFromString($userInput);
+                    if ($value['required'] && $userInputType == 'NULL')
                     {
                         if (!$defaultIsNull) { break; }
                         echo 'Input is required. Please try again.' . PHP_EOL;
                     }
-                    else if (GetTypeFromString($userInput) !== $value['type'])
+                    else if ($userInputType != $value['type'])
                     {
-                        if (!$defaultIsNull && $userInput == '' || ctype_space($userInput)) { break; }
-                        echo 'Input must be of type \'' . $value['type'] . '\'. Please try again.' . PHP_EOL;
+                        if (!$defaultIsNull || ($value['type'] == 'string' && $defaultIsNull && $userInputType == 'NULL')) { break; }
+                        echo 'Input must be of type \'' .
+                            $value['type'] .
+                            '\'' .
+                            ($defaultIsNull ? ' or \'NULL\'' : '') .
+                            ', not \'' .
+                            $userInputType .
+                            '\'. Please try again.' .
+                            PHP_EOL;
                     }
                     else
                     {
@@ -92,9 +101,9 @@ function PopulateConfig(object $config, array $template)
                         break;
                     }
                 }
-                if ($userInput == '' || ctype_space($userInput))
+                if ($userInputType == 'NULL')
                 {
-                    $userInput = $defaultIsNull ? null : $value['default'];
+                    $userInput = $defaultIsNull ? '' : $value['default'];
                 }
                 $config->{$key} = $userInput;
             }
@@ -179,7 +188,10 @@ function WebserverConfiguration()
         #region Misc
         location $sitePath/_assets { deny all; }
         location $sitePath/_storage { deny all; }
+        location $sitePath/_updates { deny all; }
         location $sitePath/setup.php { deny all; }
+        location $sitePath/dist { deny all; }
+        location $sitePath/dist.zip { deny all; }
         #endregion
 
         location ~ \.php$ {
@@ -237,9 +249,13 @@ function DatabaseSetup()
         if (!in_array('table.sql', $files)) { continue; }
         $tableSql = file_get_contents($tablesPath . '/' . $directory . '/table.sql');
         echo 'Creating table \'' . $directory . '\' if it does not exist...' . PHP_EOL;
-        if (!$pdo->prepare($tableSql)->execute())
+        try
         {
-            echo 'Failed to create table \'' . $directory . '\'' . PHP_EOL;
+            $pdo->prepare($tableSql)->execute();
+        }
+        catch (PDOException $e)
+        {
+            echo 'Error creating table \'' . $directory . '\': ' . $e->getMessage() . PHP_EOL;
             $hadErrors = true;
         }
     }
@@ -250,9 +266,13 @@ function DatabaseSetup()
         if (!in_array('restraints.sql', $files)) { continue; }
         $restraintsSql = file_get_contents($tablesPath . '/' . $directory . '/restraints.sql');
         echo 'Adding restraints to table \'' . $directory . '\'...' . PHP_EOL;
-        if (!$pdo->prepare($restraintsSql)->execute())
+        try
         {
-            echo 'Failed to add restraints to table \'' . $directory . '\'' . PHP_EOL;
+            $pdo->prepare($restraintsSql)->execute();
+        }
+        catch (PDOException $e)
+        {
+            echo 'Error adding restraints to table \'' . $directory . '\': ' . $e->getMessage() . PHP_EOL;
             $hadErrors = true;
         }
     }
@@ -263,7 +283,11 @@ function DatabaseSetup()
         if (!in_array('populate.sql', $files)) { continue; }
         $populateSql = file_get_contents($tablesPath . '/' . $directory . '/populate.sql');
         echo 'Populating table \'' . $directory . '\'...' . PHP_EOL;
-        if (!$pdo->prepare($populateSql)->execute())
+        try
+        {
+            $pdo->prepare($populateSql)->execute();
+        }
+        catch (PDOException $e)
         {
             echo 'Failed to populate table \'' . $directory . '\'' . PHP_EOL;
             $hadErrors = true;
@@ -319,7 +343,11 @@ function MiscSetup()
 #endregion
 
 #region Configure specific settings check
-$configureStage = isset($args['configure']) && GetTypeFromString($args['configure']) == 'string' ? strtolower($args['configure']) : 'all';
+global $setupIsImported;
+$configureStage =
+    isset($args['configure']) && GetTypeFromString($args['configure']) == 'string' ?
+    strtolower($args['configure']) :
+    ($setupIsImported !== true ? 'all' : '');
 switch ($configureStage)
 {
     case 'config':
@@ -334,11 +362,14 @@ switch ($configureStage)
     case 'misc':
         MiscSetup();
         break;
-    default: //All
+    case 'all':
         ConfigGeneration();
         WebserverConfiguration();
         DatabaseSetup();
         MiscSetup();
+        break;
+    default:
+        if ($setupIsImported !== true) { echo 'Invalid configuration stage specified.' . PHP_EOL; }
         break;
 }
 #endregion

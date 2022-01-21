@@ -86,6 +86,7 @@
                 <button class="logOutButton" type="button">Log Out</button>
             </div>
         </form>
+        <button id="googleAccountButton" class="center x"><span>Link google account</span></button>
     </div>
 </body>
 <footer id="footer">

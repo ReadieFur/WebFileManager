@@ -1,5 +1,6 @@
-import { Main, IXHRReject } from './assets/js/main.js';
-import { Account } from './assets/js/account.js';
+import { Main, EErrorMessages } from "./assets/js/main.js";
+import { Account } from "./assets/js/account.js";
+import { GAPIHelper, EGAPIStatus, IRejectReason } from "./assets/js/gapi_helper.js";
 
 class Index
 {
@@ -24,7 +25,9 @@ class Index
             confirmPassword: HTMLInputElement;
             updateAccountButton: HTMLButtonElement;
             logOutButton: HTMLButtonElement;
-        }
+        },
+        googleAccountButton: HTMLButtonElement;
+        googleAccountButtonText: HTMLSpanElement;
     };
     private userID?: string;
     private userToken?: string;
@@ -52,7 +55,9 @@ class Index
                 confirmPassword: Main.GetElement("#accountTab .confirmPassword"),
                 updateAccountButton: Main.GetElement("#accountTab .updateAccountButton"),
                 logOutButton: Main.GetElement("#accountTab .logOutButton")
-            }
+            },
+            googleAccountButton: Main.GetElement("#googleAccountButton"),
+            googleAccountButtonText: Main.GetElement("#googleAccountButton > span")
         };
         Main.PreventFormSubmission(this.elements.logInTab.form);
         Main.PreventFormSubmission(this.elements.accountTab.form);
@@ -92,9 +97,77 @@ class Index
             });
         }
 
+        if (Main.GOOGLE_CLIENT_ID !== null)
+        {
+            GAPIHelper.Init().then(
+                () => { this.SetupGAPIButton(); },
+                (error: IRejectReason) =>
+                {
+                    //The GAPI button is already hidden at this point.
+                    Main.Alert("Google API error.");
+                    console.error(EGAPIStatus[error.code], error.error);
+                }
+            );
+        }
+
         this.elements.logInTab.logInButton.addEventListener('click', () => { this.LogIn(); });
         this.elements.accountTab.updateAccountButton.addEventListener('click', () => { this.UpdateAccount(); });
         this.elements.accountTab.logOutButton.addEventListener('click', () => { this.LogOut(); });
+    }
+
+    private SetupGAPIButton()
+    {
+        GAPIHelper.AttatchGAPISignInButton(
+            this.elements.googleAccountButton,
+            (googleUser) =>
+            {
+                const userAuth = googleUser.getAuthResponse();
+                Main.SetCache(
+                    "google_user_token",
+                    userAuth.id_token,
+                    userAuth.expires_in / (60 * 60 * 24), //Convert the expiry time from seconds to days.
+                    Main.WEB_ROOT
+                );
+
+                this.elements.googleAccountButtonText.innerText = "Unlink Google Account";
+                this.elements.googleAccountButton.querySelector("div")!.onclick = async () => //This is suitable for stealing the onclick event back from the one GAPI sets.
+                {
+                    Main.SetCache("google_user_token", "", 0, Main.WEB_ROOT);
+                    await GAPIHelper.SignOut().then(
+                        () =>
+                        {
+                            this.elements.googleAccountButtonText.innerText = "Link Google Account";
+                            this.elements.googleAccountButton.querySelector("div")!.onclick = null;
+                            this.SetupGAPIButton(); //Because we stole the onclick event, we need to re-setup the button.
+                        },
+                        (error: IRejectReason) =>
+                        {
+                            Main.Alert("Google API error.");
+                            console.error(EGAPIStatus[error.code], error.error);
+                        }
+                    );
+                };
+            },
+            (error) =>
+            {
+                Main.Alert("Google API error.");
+                console.error(error);
+            },
+            {
+                client_id: Main.GOOGLE_CLIENT_ID!,
+                fetch_basic_profile: true,
+                ux_mode: "redirect",
+                redirect_uri: window.location.origin + Main.WEB_ROOT
+            }
+        ).then(
+            () => { this.elements.googleAccountButton.style.display = 'block'; },
+            (error: IRejectReason) =>
+            {
+                Main.Alert("Failed to initialize Google API.");
+                console.log(EGAPIStatus[error.code], error.error);
+                this.elements.googleAccountButton.style.display = 'none';
+            }
+        );
     }
 
     private SetTab(tab: "logInTab" | "accountTab"): void
@@ -136,8 +209,8 @@ class Index
         this.userID = logInResponse.data!.uid;
         this.userToken = logInResponse.data!.token;
 
-        Main.SetCache('uid', logInResponse.data!.uid, this.COOKIE_TIME, Main.WEB_ROOT + '/');
-        Main.SetCache('token', logInResponse.data!.token, this.COOKIE_TIME, Main.WEB_ROOT + '/');
+        Main.SetCache('uid', logInResponse.data!.uid, this.COOKIE_TIME, Main.WEB_ROOT);
+        Main.SetCache('token', logInResponse.data!.token, this.COOKIE_TIME, Main.WEB_ROOT);
 
         this.SetTab('accountTab');
         this.elements.accountTab.username.value = username;

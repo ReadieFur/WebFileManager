@@ -194,8 +194,9 @@ class ShareRequestHelper
             !isset(Request::Post()['id']) ||
             !isset(Request::Post()['token']) ||
             !isset(Request::Post()['path']) ||
-            !isset(Request::Post()['share_type']) ||
-            !isset(Request::Post()['expiry_time'])
+            !isset(Request::Post()['share_type']) || Request::Post()['share_type'] > 2 || Request::Post()['share_type'] < 0 ||
+            !isset(Request::Post()['expiry_time']) || (Request::Post()['expiry_time'] != '0' && intval(Request::Post()['expiry_time']) == 0) ||
+            !isset(Request::Post()['google_share_users'])
         )
         { Request::SendError(400, ErrorMessages::INVALID_PARAMETERS); }
 
@@ -213,6 +214,7 @@ class ShareRequestHelper
             Request::Post()['path'],
             Request::Post()['share_type'],
             Request::Post()['expiry_time'],
+            Request::Post()['google_share_users'],
             $isDirectory
         );
         
@@ -245,8 +247,9 @@ class ShareRequestHelper
             !isset(Request::Post()['token']) ||
             !isset(Request::Post()['sid']) ||
             !isset(Request::Post()['path']) ||
-            !isset(Request::Post()['share_type']) || Request::Post()['share_type'] > 1 || Request::Post()['share_type'] < 0 ||
-            !isset(Request::Post()['expiry_time']) || !ctype_digit(Request::Post()['expiry_time'])
+            !isset(Request::Post()['share_type']) || Request::Post()['share_type'] > 2 || Request::Post()['share_type'] < 0 ||
+            !isset(Request::Post()['expiry_time']) || (Request::Post()['expiry_time'] != '0' && intval(Request::Post()['expiry_time']) == 0) ||
+            !isset(Request::Post()['google_share_users'])
         )
         { Request::SendError(400, ErrorMessages::INVALID_PARAMETERS); }
 
@@ -265,6 +268,7 @@ class ShareRequestHelper
             Request::Post()['path'],
             Request::Post()['share_type'],
             Request::Post()['expiry_time'],
+            Request::Post()['google_share_users'],
             $isDirectory
         );
 
@@ -314,6 +318,35 @@ class ShareRequestHelper
             {
                 case 400:
                     Request::SendError($result, ErrorMessages::INVALID_PARAMETERS);
+                case 404:
+                    Request::SendError($result, ErrorMessages::INVALID_PATH);
+                case 500:
+                    Request::SendError($result, ErrorMessages::DATABASE_ERROR);
+                default:
+                    Request::SendError($result, ErrorMessages::UNKNOWN_ERROR);
+            }
+        }
+
+        Request::SendResponse(200, $result);
+    }
+
+    public static function GetShareByID(bool $isDirectory)
+    {
+        if (!isset(Request::Post()['sid']))
+        { Request::SendError(400, ErrorMessages::INVALID_PARAMETERS); }
+
+        //This method, while it shares the same data as GetShare, because it is using the share ID, it is not sensitive and therefore I do not need to verify the account.
+
+        $shareHelper = new ShareHelper();
+        $result = $shareHelper->GetShareByID(
+            Request::Post()['sid'],
+            $isDirectory
+        );
+        
+        if (is_int($result))
+        {
+            switch ($result)
+            {
                 case 404:
                     Request::SendError($result, ErrorMessages::INVALID_PATH);
                 case 500:

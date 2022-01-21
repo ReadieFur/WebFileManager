@@ -97,6 +97,16 @@
             }
         }
     },
+    "gapi":
+    {
+        "client_id":
+        {
+            "type": "string",
+            "description": "The client ID for the Google API",
+            "default": "",
+            "required": false
+        }
+    },
     "log":
     {
         "path":

@@ -2,8 +2,10 @@
 require_once __DIR__ . '/../request.php';
 require_once __DIR__ . '/../../../_assets/configuration/config.php';
 require_once __DIR__ . '/../_helpers/accountHelper.php';
+require_once __DIR__ . '/../_helpers/shareHelper.php';
 require_once __DIR__ . '/../../../_assets/database/tables/webfilemanager_paths/webfilemanager_paths.php';
 require_once __DIR__ . '/../../../_assets/database/tables/webfilemanager_shares/webfilemanager_shares.php';
+require_once __DIR__ . '/../../../_assets/database/tables/webfilemanager_google_shares/webfilemanager_google_shares.php';
 require_once __DIR__ . '/../../../_assets/libs/vendor/autoload.php';
 
 #region Request checks
@@ -176,15 +178,46 @@ if (!empty($path))
                 break;
             }
         }
+
+        if ($share->expiry_time != 0 && time() > $share->expiry_time)
+        { Request::SendError(403, ErrorMessages::SHARE_EXPIRED); }
+
         switch ($share->share_type)
         {
-            case 0:
-                //Public.
+            case EShareType::PUBLIC:
                 GetDirectory($path, $roots, $searchPath, true);
-            case 1:
-                //Public with timeout.
-                if (time() > $share->expiry_time)
-                { Request::SendError(403, ErrorMessages::SHARE_EXPIRED); }
+            case EShareType::GOOGLE_INVITE:
+                if (Config::Config()['gapi']['client_id'] == '') { Request::SendError(500, ErrorMessages::GAPI_NOT_CONFIGURED); }
+                else if (!isset(Request::Get()['google_user_token'])) { Request::SendError(400, ErrorMessages::GOOGLE_AUTHENTICATION_REQUIRED); }
+
+                $googleClient = new Google_Client(['client_id' => Config::Config()['gapi']['client_id']]);  // Specify the CLIENT_ID of the app that accesses the backend
+                $googleAccount = $googleClient->verifyIdToken(Request::Get()['google_user_token']);
+                if (!$googleAccount) { Request::SendError(401, ErrorMessages::INVALID_ACCOUNT_DATA); }
+
+                $googleSharesTable = new webfilemanager_google_shares(
+                    true,
+                    Config::Config()['database']['host'],
+                    Config::Config()['database']['database'],
+                    Config::Config()['database']['username'],
+                    Config::Config()['database']['password']
+                );
+                $selectResponse = $googleSharesTable->Select(array(
+                    'user' => substr($googleAccount['email'], 0, strlen($googleAccount['email']) - 10) //substr 10, Remove the @gmail.com part.
+                ));
+
+                if ($selectResponse === false)
+                {
+                    Logger::Log(
+                        array(
+                            $googleSharesTable->GetLastException(),
+                            $googleSharesTable->GetLastSQLError()
+                        ),
+                        LogLevel::ERROR
+                    );
+                    Request::SendError(500, ErrorMessages::UNKNOWN_ERROR);
+                }
+                else if (empty($selectResponse)) { Request::SendError(401, ErrorMessages::INVALID_ACCOUNT_DATA); }
+                
                 GetDirectory($path, $roots, $searchPath, true);
             default:
                 Request::SendError(500, ErrorMessages::UNKNOWN_ERROR);

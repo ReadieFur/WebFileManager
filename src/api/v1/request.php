@@ -19,6 +19,8 @@ class ErrorMessages
     const INVALID_FILE_TYPE = 'INVALID_FILE_TYPE';
     const SHARE_EXPIRED = 'SHARE_EXPIRED';
     const UNKNOWN_ERROR = 'UNKNOWN_ERROR';
+    const GAPI_NOT_CONFIGURED = 'GAPI_NOT_CONFIGURED';
+    const GOOGLE_AUTHENTICATION_REQUIRED = 'GOOGLE_AUTHENTICATION_REQUIRED';
 }
 
 class RequestMethod
@@ -90,7 +92,13 @@ class Request
         self::$SERVER = $_SERVER;
         self::$SERVER['REQUEST_URI'] = $requestURI;
         self::$REQUEST_METHOD = RequestMethod::GetMethod(self::$SERVER['REQUEST_METHOD']);
-        self::$GET = $_GET;
+        self::$GET = array();
+        foreach ($_GET as $key => $value)
+        {
+            $jsonResult = json_decode($value, true);
+            if ($jsonResult !== null) { self::$GET[$key] = $jsonResult; }
+            else { self::$GET[$key] = $value; }
+        }
         self::$POST = array();
         foreach ($_POST as $key => $value)
         {
@@ -103,8 +111,11 @@ class Request
             //https://stackoverflow.com/a/21206159
             else
             {
-                if (urlencode(urldecode($value)) === $value) { self::$POST[$key] = urldecode($value); }
-                else if (rawurlencode(rawurldecode($value)) === $value) { self::$POST[$key] = rawurldecode($value); }
+                if (urlencode(urldecode($value)) === $value) { $value = urldecode($value); }
+                else if (rawurlencode(rawurldecode($value)) === $value) { $value = rawurldecode($value); }
+
+                $jsonResult = json_decode($value, true);
+                if ($jsonResult !== null) { self::$POST[$key] = $jsonResult; }
                 else { self::$POST[$key] = $value; }
             }
         }

@@ -1,11 +1,13 @@
 //Modified from: https://raw.githubusercontent.com/kOFReadie/BSDP-Overlay/master/src/assets/js/main.ts
 
 declare var WEB_ROOT: string;
+declare var GOOGLE_CLIENT_ID: string | null;
 declare var ACCENT: string;
 
 export class Main
 {
     public static WEB_ROOT: string;
+    public static GOOGLE_CLIENT_ID: string | null;
     public static ACCENT:
     {
         R: number;
@@ -13,15 +15,18 @@ export class Main
         B: number;
         HEX: string;
     };
+
     public static header: HTMLElement;
     public static footer: HTMLElement;
     public static urlParams: URLSearchParams;
 
-    private static alertBoxContainer: HTMLDivElement;
-    private static alertBoxText: HTMLParagraphElement;
-    private static alertBoxTextBox: HTMLInputElement;
-
     private static readonly COOKIE_PREFIX = "wfm_";
+
+    private static alertBoxContainer: HTMLDivElement;
+    private static alertBoxBackground: HTMLDivElement;
+    private static alertBox: HTMLDivElement;
+    private static alertBoxText: HTMLDivElement;
+    private static alertBoxTextBox: HTMLInputElement;
 
     constructor()
     {
@@ -48,6 +53,7 @@ export class Main
         `);
         
         Main.WEB_ROOT = WEB_ROOT;
+        Main.GOOGLE_CLIENT_ID = GOOGLE_CLIENT_ID != "" ? GOOGLE_CLIENT_ID : null;
         Main.ACCENT =
         {
             R: parseInt(ACCENT.substring(1, 3), 16),
@@ -55,14 +61,22 @@ export class Main
             B: parseInt(ACCENT.substring(5, 7), 16),
             HEX: ACCENT
         };
+
         Main.urlParams = new URLSearchParams(location.search);
         Main.header = Main.ThrowIfNullOrUndefined(document.querySelector("#header"));
         Main.footer = Main.ThrowIfNullOrUndefined(document.querySelector("#footer"));
 
         Main.alertBoxContainer = Main.ThrowIfNullOrUndefined(document.querySelector("#alertBoxContainer"));
-        Main.alertBoxText = Main.ThrowIfNullOrUndefined(document.querySelector("#alerBoxText"));
+        Main.alertBoxBackground = Main.ThrowIfNullOrUndefined(document.querySelector("#alertBoxContainer > .background"));
+        Main.alertBox = Main.ThrowIfNullOrUndefined(document.querySelector("#alertBox"));
+        Main.alertBoxText = Main.ThrowIfNullOrUndefined(document.querySelector("#alertBoxText"));
         Main.alertBoxTextBox = Main.ThrowIfNullOrUndefined(document.querySelector("#alertBoxTextBox"));
-        Main.alertBoxContainer.addEventListener("click", () => { Main.alertBoxContainer.style.display = "none"; });
+        Main.alertBoxContainer.addEventListener("click", (e) =>
+        {
+            // if (e.target === Main.alertBox || e.target === Main.alertBoxBackground)
+            if ((<HTMLElement>e.target).nodeName != "INPUT")
+            { Main.alertBoxContainer.style.display = "none"; }
+        });
 
         if (Main.RetreiveCache(`dark_mode`) != "false") { Main.DarkTheme(true); }
         else { Main.DarkTheme(false); }
@@ -121,7 +135,7 @@ export class Main
 
     public static DarkTheme(dark: boolean): void
     {
-        Main.SetCache(`dark_mode`, dark ? "true" : "false", 365);
+        Main.SetCache(`dark_mode`, dark ? "true" : "false", 365, Main.WEB_ROOT);
         var darkButton: HTMLInputElement = Main.ThrowIfNullOrUndefined(document.querySelector("#darkMode"));
         var themeColours: HTMLStyleElement = Main.ThrowIfNullOrUndefined(document.querySelector("#themeColours"));
         if (dark) { darkButton.classList.add("accent"); }
@@ -151,14 +165,15 @@ export class Main
         return undefined;
     }
 
-    //Time is time in days.
+    //Time is time in days (change this to epoch instead).
     public static SetCache(cookie_name: string, value: string, time: number, path: string = '/'): void
     {
         cookie_name = Main.COOKIE_PREFIX + cookie_name;
         var hostSplit = window.location.host.split(".");
         var domain = `.${hostSplit[hostSplit.length - 2]}.${hostSplit[hostSplit.length - 1]}`;
         var expDate = new Date();
-        expDate.setDate(expDate.getDate() + time);
+        if (time < 1) { expDate.setSeconds(expDate.getSeconds() + time * 86400); }
+        else { expDate.setDate(expDate.getDate() + time); }
         document.cookie = `${cookie_name}=${value}; expires=${expDate.toUTCString()}; path=${path}; domain=${domain};`;
     }
 
@@ -183,7 +198,9 @@ export class Main
                 for (var pKey in data.data)
                 {
                     //The toString() method used below will convert the values to a suitable URL-encoded string.
-                    params.set(pKey, data.data[pKey]);
+                    var pValue = data.data[pKey];
+                    if (typeof pValue === "object") { pValue = JSON.stringify(pValue); }
+                    params.set(pKey, pValue);
                 }
             }
 
@@ -293,7 +310,7 @@ export class Main
         //Element value format: YYYY-MM-DDTHH:mm
         const date = new Date(unixTime);
         return `${date.getFullYear()}-${
-            (date.getMonth() + 1) < 10 ? "0" + date.getMonth().toString() : date.getMonth()}-${
+            (date.getMonth() + 1) < 10 ? "0" + (date.getMonth() + 1).toString() : date.getMonth() + 1}-${
             date.getDate() < 10 ? "0" + date.getDate().toString() : date.getDate()}T${
             date.getHours() < 10 ? "0" + date.getHours().toString() : date.getHours()}:${
             date.getMinutes() < 10 ? "0" + date.getMinutes().toString() : date.getMinutes()}`;
@@ -318,13 +335,25 @@ export class Main
     }
 
     //This is asyncronous as I will check if the user has dismissed the alert box in the future.
-    public static async Alert(message: string/*, solidBackground = false*/): Promise<void>
+    public static async Alert(message: string | HTMLElement/*, solidBackground = false*/): Promise<void>
     {
         if (Main.alertBoxTextBox != null && Main.alertBoxText != null && Main.alertBoxContainer != null)
         {
-            console.log("Alert:", message);
+            console.trace("Alert:", message);
             Main.alertBoxTextBox.focus();
-            Main.alertBoxText.innerHTML = message;
+            if (typeof message === "string")
+            {
+                Main.alertBoxText.innerHTML = "";
+                const container = document.createElement("p");
+                container.innerHTML = message;
+                container.classList.add("alertBoxText");
+                Main.alertBoxText.appendChild(container);
+            }
+            else
+            {
+                Main.alertBoxText.innerHTML = "";
+                Main.alertBoxText.appendChild(message);
+            }
             Main.alertBoxContainer.style.display = "block";
         }
     }
@@ -337,6 +366,21 @@ export class Main
     public static Sleep(milliseconds: number): Promise<unknown>
     {
         return new Promise(r => setTimeout(r, milliseconds));
+    }
+
+    public static TryParseEnum<T>(enumObject: object, value: string): { success: true, value: T } | { success: false, value: null }
+    // public static TryParseEnum<T>(enumObject: object, value: string): [true, T] | [false, undefined]
+    {
+        if (parseInt(value)) { return { success: false, value: null }; }
+
+        for (const entry of Object.entries(enumObject))
+        {
+            if (entry[0] === value)
+            {
+                return { success: true, value: entry[1] as T };
+            }
+        }
+        return { success: false, value: null };
     }
 
     public static GetErrorMessage(error: any): string
@@ -371,6 +415,16 @@ export class Main
                 return "Share expired.";
             case EErrorMessages.UNKNOWN_ERROR:
                 return "Unknown error.";
+            case EErrorMessages.GAPI_LOADING:
+                return "Google API is loading.";
+            case EErrorMessages.GAPI_CLIENT_ID_NOT_FOUND:
+                return "Google API client ID not found.";
+            case EErrorMessages.GAPI_NOT_LOADED:
+                return "Google API not loaded.";
+            case EErrorMessages.GAPI_NOT_CONFIGURED:
+                return "Google API not configured.";
+            case EErrorMessages.GOOGLE_AUTHENTICATION_REQUIRED:
+                return "Google authentication required.";
             default:
                 return `Unknown error.<br><small>${String(error)}</small>`;
         }
@@ -413,5 +467,10 @@ export enum EErrorMessages
     THUMBNAL_ERROR = "THUMBNAL_ERROR",
     INVALID_FILE_TYPE = "INVALID_FILE_TYPE",
     SHARE_EXPIRED = "SHARE_EXPIRED",
-    UNKNOWN_ERROR = "UNKNOWN_ERROR"
+    UNKNOWN_ERROR = "UNKNOWN_ERROR",
+    GAPI_LOADING = "GAPI_LOADING",
+    GAPI_CLIENT_ID_NOT_FOUND = "GAPI_CLIENT_ID_NOT_FOUND",
+    GAPI_NOT_LOADED = "GAPI_NOT_LOADED",
+    GAPI_NOT_CONFIGURED = "GAPI_NOT_CONFIGURED",
+    GOOGLE_AUTHENTICATION_REQUIRED = "GOOGLE_AUTHENTICATION_REQUIRED",
 }

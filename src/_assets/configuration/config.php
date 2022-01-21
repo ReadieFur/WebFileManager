@@ -46,13 +46,17 @@ class Config
                     isset($value['required'])
                 )
                 {
-                    if (self::GetTypeFromString($config[$key]) !== $value['type'])
+                    $dataType = self::GetTypeFromString($config[$key]);
+                    if ($dataType != $value['type'])
                     {
-                        $errorMessage = "Invalid type for key: " . $key;
-                        self::Log($errorMessage);
-                        throw new Exception($errorMessage);
+                        if (!($value['type'] == 'string' && self::GetTypeFromString($value['default']) == 'NULL' && $dataType == 'NULL'))
+                        {
+                            $errorMessage = "Invalid type for key: " . $key . $value['type'] . self::GetTypeFromString($value['default']) . $dataType;
+                            self::Log($errorMessage);
+                            throw new Exception($errorMessage);
+                        }
                     }
-                    else if ($value['required'] && ($config[$key] == '' || ctype_space($config[$key])))
+                    else if ($value['required'] && ($dataType == 'NULL'))
                     {
                         $errorMessage = "A value is required for key: " . $key;
                         self::Log($errorMessage);

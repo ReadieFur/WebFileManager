@@ -29,7 +29,7 @@
     <div class="background"></div>
     <div id="alertBox">
         <input id="alertBoxTextBox" type="text">
-        <p id="alerBoxText"></p>
-        <p class="dismissText"><small>Click to dismiss this messaege.</small></p>
+        <div id="alertBoxText"></div>
+        <p class="dismissText"><small>Click to dismiss this message.</small></p>
     </div>
 </div>

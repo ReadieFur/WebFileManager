@@ -153,11 +153,23 @@ button, .asButton
     outline: none;
     border: 2.5px solid rgba(var(--foregroundColour), 1);
 
+    *
+    {
+        color: rgba(var(--foregroundColour), 1);
+        transition: ease .4s;
+        transition-property: background-color, color;
+    }
+
     &:hover
     {
         color: rgba(var(--backgroundColour), 1);
         background-color: rgba(var(--foregroundColour), 1);
         cursor: pointer;
+
+        *
+        {
+            color: rgba(var(--backgroundColour), 1);
+        }
     }
 
     &.containsLink
@@ -174,6 +186,11 @@ button, .asButton
     {
         color: rgba(var(--backgroundColour), 1);
         background-color: rgba(var(--foregroundColour), 1);
+
+        *
+        {
+            color: rgba(var(--backgroundColour), 1);
+        }
 
         &:not(.dontForceCursor)
         {

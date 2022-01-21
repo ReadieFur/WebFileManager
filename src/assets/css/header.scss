@@ -185,17 +185,26 @@ header
             display: none;
         }
 
-        > p
+        > div
+        {
+            > .alertBoxText
+            {
+                text-align: center;
+            }
+
+            input
+            {
+                user-select: text;
+            }
+        }
+
+        > p.dismissText
         {
             text-align: center;
 
-            &.dismissText
+            > small
             {
-                > small
-                {
-                    font-weight: normal;
-                    text-align: center;
-                }
+                font-weight: normal;
             }
         }
     }

@@ -19,6 +19,7 @@
 <meta property="og:url" content="<?php echo $_SERVER['REQUEST_URI']; ?>"/>
 <meta property="og:image" content="<?php echo Config::Config()['site']['path']; ?>/assets/images/icon.png"/>
 <meta name="theme-color" content="<?php echo Config::Config()['site']['theme']['accent']; ?>">
+<meta name="google-signin-client_id" content="<?php echo Config::Config()['gapi']['client_id']; ?>">
 <title><?php echo $_title; ?></title>
 <link rel="icon" href="<?php echo Config::Config()['site']['path']; ?>/assets/images/icon.png" type="image/png">
 <!-- #region Font imports -->
@@ -31,6 +32,7 @@
 <link rel="stylesheet" type="text/css" href="<?php echo Config::Config()['site']['path']; ?>/assets/css/main.css"/>
 <script>
     var WEB_ROOT = "<?php echo Config::Config()['site']['path']; ?>";
+    var GOOGLE_CLIENT_ID = "<?php echo Config::Config()['gapi']['client_id']; ?>";
     var ACCENT = "<?php echo Config::Config()['site']['theme']['accent']; ?>";
 </script>
 <style id="themeColours"></style>

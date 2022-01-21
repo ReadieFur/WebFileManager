@@ -1,8 +1,11 @@
-import { Main, IXHRReject, IServerErrorResponse } from "../../assets/js/main.js";
+import { Main, IXHRReject, IServerErrorResponse, EErrorMessages } from "../../assets/js/main.js";
 
 class Directory
 {
+    private static readonly GMAIL_REGEX = /[A-z\d_\.-]{6,30}/;
+
     private firstLoad: boolean;
+    private useGAPIFeatures: boolean;
     private directory: string[];
     private elements:
     {
@@ -20,10 +23,16 @@ class Directory
             sharingTypes: HTMLSelectElement,
             subMenus:
             {
-                publicOptions:
+                googleInviteOptions:
                 {
                     container: HTMLTableSectionElement,
-                    publicSharingTimeInput: HTMLInputElement
+                    googleInviteUser: HTMLInputElement,
+                    googleInviteList: HTMLUListElement,
+                },
+                sharingTime:
+                {
+                    container: HTMLTableSectionElement,
+                    input: HTMLInputElement
                 }
             },
             unsavedChangesNotice: HTMLParagraphElement,
@@ -39,6 +48,7 @@ class Directory
         new Main();
 
         this.firstLoad = true;
+        this.useGAPIFeatures = Main.GOOGLE_CLIENT_ID !== null;
         this.directory = [];
         this.elements =
         {
@@ -56,10 +66,16 @@ class Directory
                 sharingTypes: Main.GetElement("#sharingTypes"),
                 subMenus:
                 {
-                    publicOptions:
+                    googleInviteOptions:
                     {
-                        container: Main.GetElement("#publicSharing"),
-                        publicSharingTimeInput: Main.GetElement("#publicExpiryTime")
+                        container: Main.GetElement("#googleInviteSharing"),
+                        googleInviteUser: Main.GetElement("#googleInviteUser"),
+                        googleInviteList: Main.GetElement("#googleInviteList")
+                    },
+                    sharingTime:
+                    {
+                        container: Main.GetElement("#expiryTimeContainer"),
+                        input: Main.GetElement("#expiryTime")
                     }
                 },
                 unsavedChangesNotice: Main.GetElement("#unsavedSharingChangesNotice"),
@@ -76,20 +92,27 @@ class Directory
             this.elements.preview.iframe.src = "";
         });
 
+        this.elements.sharingMenu.container.querySelectorAll("form").forEach(form => { Main.PreventFormSubmission(form); });
         this.elements.sharingMenu.background.addEventListener("click", () => { Main.FadeElement("none", this.elements.sharingMenu.container); });
         this.elements.sharingMenu.sharingTypes.addEventListener("change", () => { this.UpdateSharingMenu(); });
-        this.elements.sharingMenu.subMenus.publicOptions.publicSharingTimeInput.addEventListener("change", () =>
+        this.elements.sharingMenu.subMenus.sharingTime.input.addEventListener("change", () =>
         {
             this.elements.sharingMenu.unsavedChangesNotice.style.display = "block";
             // this.elements.sharingMenu.saveButton.style.display = "block";
+        });
+        this.elements.sharingMenu.subMenus.googleInviteOptions.googleInviteUser.addEventListener("keypress", (e) =>
+        {
+            if (e.key === "Space") { e.preventDefault(); }
+            else if (e.key === "Enter") { this.AddGoogleInviteUser(this.elements.sharingMenu.subMenus.googleInviteOptions.googleInviteUser.value); }
         });
 
         //Navigation bar highlight override.
         Main.GetElement<HTMLAnchorElement>(`.navigationContainer a[href='${Main.WEB_ROOT}/view/directory/']`).classList.add("accent");
 
         //Listen for page navigation.
-        window.addEventListener("popstate", (e) => { this.OnWindowPopState(window.location.pathname); });
-        this.OnWindowPopState(window.location.pathname);
+        window.addEventListener("popstate", () => { this.OnWindowPopState(window.location.pathname); });
+
+        this.OnWindowPopState(window.location.pathname); /*Initial load.*/
     }
 
     private OnWindowPopState(path: string): void
@@ -99,18 +122,72 @@ class Directory
         this.LoadDirectory(urlParts.join("/"), true);
     }
 
-    private UpdateSharingMenu(): void
+    private AddGoogleInviteUser(user: string, alertUnsavedChanges = true): void
     {
-        this.elements.sharingMenu.unsavedChangesNotice.style.display = "block";
+        if (user.endsWith("@gmail.com")) { user = user.substring(0, user.length - 10); }
+
+        if (this.GetGoogleInviteUsersFromUI().includes(user)) { Main.Alert("User already added."); return; }
+
+        const regexTest = Directory.GMAIL_REGEX.exec(user);
+        if (regexTest === null || regexTest[0] !== user) { Main.Alert("Invalid google username."); return; }
+
+        const li = document.createElement("li");
+        li.innerText = user;
+        li.classList.add("light");
+        li.onclick = () =>
+        {
+            li.remove();
+            this.elements.sharingMenu.unsavedChangesNotice.style.display = "block";
+            // this.elements.sharingMenu.saveButton.style.display = "block";
+        };
+        this.elements.sharingMenu.subMenus.googleInviteOptions.googleInviteList.appendChild(li);
+        
+        this.elements.sharingMenu.subMenus.googleInviteOptions.googleInviteUser.value = "";
+        
+        if (alertUnsavedChanges)
+        {
+            this.elements.sharingMenu.unsavedChangesNotice.style.display = "block";
+            // this.elements.sharingMenu.saveButton.style.display = "block";
+        }
+    }
+
+    private GetGoogleInviteUsersFromUI(withContentChecks = false): string[]
+    {
+        const users: string[] = [];
+        this.elements.sharingMenu.subMenus.googleInviteOptions.googleInviteList.querySelectorAll("li").forEach(
+            withContentChecks ?
+            (li) =>
+            {
+                var user = li.innerText;
+                if (user.endsWith("@gmail.com")) { user = li.innerText.substring(0, li.innerText.length - 11); }
+                const regexTest = Directory.GMAIL_REGEX.exec(user);
+                if (regexTest !== null && regexTest[0] === user) { users.push(user); }
+            }:
+            (li) => { users.push(li.innerText); }
+        );
+        return users;
+    }
+
+    private UpdateSharingMenu(alertUnsavedChanges = true): void
+    {
+        this.elements.sharingMenu.unsavedChangesNotice.style.display = alertUnsavedChanges ? "block" : "none";
         // this.elements.sharingMenu.saveButton.style.display = "block";
+        this.elements.sharingMenu.subMenus.sharingTime.input.value = "";
+        this.elements.sharingMenu.subMenus.googleInviteOptions.googleInviteUser.value = "";
+        this.elements.sharingMenu.subMenus.googleInviteOptions.googleInviteList.innerHTML = "";
         switch (this.elements.sharingMenu.sharingTypes.value)
         {
             case "public":
-                this.elements.sharingMenu.subMenus.publicOptions.container.style.display = "table-row";
-                this.elements.sharingMenu.subMenus.publicOptions.publicSharingTimeInput.value = "";
+                this.elements.sharingMenu.subMenus.sharingTime.container.style.display = "table-row";
+                this.elements.sharingMenu.subMenus.googleInviteOptions.container.style.display = "none";
+                break;
+            case "google_invite":
+                this.elements.sharingMenu.subMenus.sharingTime.container.style.display = "table-row";
+                this.elements.sharingMenu.subMenus.googleInviteOptions.container.style.display = "table-row";
                 break;
             case "private":
-                this.elements.sharingMenu.subMenus.publicOptions.container.style.display = "none";
+                this.elements.sharingMenu.subMenus.sharingTime.container.style.display = "none";
+                this.elements.sharingMenu.subMenus.googleInviteOptions.container.style.display = "none";
                 break;
         }
     }
@@ -120,7 +197,7 @@ class Directory
         if (path.startsWith("/")) { path = path.substring(1); }
         const pathSplit = path.split("/");
 
-        const shareDetailsResponse = await this.GetShareDetails(path, isDirectory);
+        const shareDetailsResponse = await this.GetShareDetails(path, isDirectory, false);
         if (typeof shareDetailsResponse === "string")
         {
             Main.Alert(Main.GetErrorMessage(shareDetailsResponse));
@@ -129,14 +206,21 @@ class Directory
 
         this.elements.sharingMenu.unsavedChangesNotice.style.display = "none";
         // this.elements.sharingMenu.saveButton.style.display = "none";
-        this.elements.sharingMenu.sharingTypes.value = shareDetailsResponse.shared ? "public" : "private";
+        this.elements.sharingMenu.sharingTypes.value = (
+            shareDetailsResponse.shared ?
+            EShareType[shareDetailsResponse.share_type! as any as number] :
+            EShareType[EShareType.PRIVATE]
+        ).toLowerCase();
+        this.UpdateSharingMenu(false);
         if (shareDetailsResponse.shared)
         {
+            if (shareDetailsResponse.share_type == EShareType.GOOGLE_INVITE)
+            { shareDetailsResponse.google_share_users!.forEach(user => { this.AddGoogleInviteUser(user, false); }); }
+
             this.elements.sharingMenu.sharingLink.style.display = "block";
-            this.elements.sharingMenu.sharingLink.onclick = () =>
+            this.elements.sharingMenu.sharingLink.onclick = async () =>
             {
-                navigator.clipboard.writeText(
-                    window.location.origin +
+                const fileLink = window.location.origin +
                     Main.WEB_ROOT +
                     `/view/${isDirectory ? "directory" : "file"}/` +
                     shareDetailsResponse.sid! +
@@ -144,77 +228,113 @@ class Directory
                         !isDirectory ?
                         pathSplit[pathSplit.length - 1].substring(pathSplit[pathSplit.length - 1].lastIndexOf(".")) :
                         ""
-                    )
-                );
+                    );
+
+                try
+                {
+                    await navigator.clipboard.writeText(fileLink);
+                }
+                catch (ex)
+                {
+                    const container = document.createElement("div");
+                    container.classList.add("form");
+
+                    const message = document.createElement("p");
+                    message.innerText = "Your browser does not support copying to the clipboard. Please copy the link manually.";
+                    container.appendChild(message);
+
+                    const linkTextBox = document.createElement("input");
+                    linkTextBox.type = "text";
+                    linkTextBox.value = fileLink;
+                    linkTextBox.classList.add("center", "x", "light");
+                    linkTextBox.style.maxWidth = "95%";
+                    linkTextBox.style.minWidth = "95%";
+                    linkTextBox.style.overflowX = "auto";
+                    linkTextBox.style.marginBottom = "0";
+                    linkTextBox.value = fileLink;
+                    linkTextBox.readOnly = true;
+                    container.appendChild(linkTextBox);
+
+                    Main.Alert(container);
+                    // console.error(ex);
+                }
             };
             this.elements.sharingMenu.buttonContainer.classList.add("joinButtons");
-            this.elements.sharingMenu.subMenus.publicOptions.container.style.display = "table-row";
-            this.elements.sharingMenu.subMenus.publicOptions.publicSharingTimeInput.value = Main.FormatUnixToFormDate(parseInt(shareDetailsResponse.expiry_time!) * 1000);
+            // this.elements.sharingMenu.subMenus.publicOptions.container.style.display = "table-row";
+            this.elements.sharingMenu.subMenus.sharingTime.input.value = shareDetailsResponse.expiry_time! != '0' ? Main.FormatUnixToFormDate(parseInt(shareDetailsResponse.expiry_time!) * 1000) : "";
         }
         else
         {
             this.elements.sharingMenu.sharingLink.style.display = "none";
             this.elements.sharingMenu.buttonContainer.classList.remove("joinButtons");
-            this.elements.sharingMenu.subMenus.publicOptions.container.style.display = "none";
+            // this.elements.sharingMenu.subMenus.publicOptions.container.style.display = "none";
         }
 
         this.elements.sharingMenu.saveButton.onclick = async () =>
         {
+            const shareType = Main.TryParseEnum<EShareType>(EShareType, this.elements.sharingMenu.sharingTypes.value.toUpperCase());
+            if (!shareType.success)
+            {
+                Main.Alert("Invalid sharing type.");
+                return;
+            }
+
             if (shareDetailsResponse.shared)
             {
-                switch (this.elements.sharingMenu.sharingTypes.value)
+                if (shareType.value !== EShareType.PRIVATE)
                 {
-                    case "public":
-                        const updateResponse = await this.SaveShareDetails(
-                            "update",
-                            isDirectory,
-                            {
-                                sid: shareDetailsResponse.sid,
-                                path: path,
-                                share_type: this.elements.sharingMenu.subMenus.publicOptions.publicSharingTimeInput.value !== "" ? 1 : 0,
-                                expiry_time: this.elements.sharingMenu.subMenus.publicOptions.publicSharingTimeInput.value !== "" ? new Date(this.elements.sharingMenu.subMenus.publicOptions.publicSharingTimeInput.value).getTime() / 1000 : 0
-                            }
-                        );
-                        if (typeof updateResponse === "string")
+                    const updateResponse = await this.SaveShareDetails(
+                        "update",
+                        isDirectory,
                         {
-                            Main.Alert(Main.GetErrorMessage(updateResponse));
-                            return;
+                            sid: shareDetailsResponse.sid,
+                            path: path,
+                            share_type: shareType.value,
+                            expiry_time: this.elements.sharingMenu.subMenus.sharingTime.input.value != "" ? new Date(this.elements.sharingMenu.subMenus.sharingTime.input.value).getTime() / 1000 : 0,
+                            google_share_users: this.GetGoogleInviteUsersFromUI(true)
                         }
-                        else
+                    );
+                    if (typeof updateResponse === "string")
+                    {
+                        Main.Alert(Main.GetErrorMessage(updateResponse));
+                        return;
+                    }
+                    else
+                    {
+                        this.ShowSharingMenu(path, isDirectory, false);
+                    }
+                }
+                else
+                {
+                    const deleteResponse = await this.SaveShareDetails(
+                        "delete",
+                        isDirectory,
                         {
-                            this.ShowSharingMenu(path, isDirectory, false);
+                            sid: shareDetailsResponse.sid
                         }
-                        break;
-                    case "private":
-                        const deleteResponse = await this.SaveShareDetails(
-                            "delete",
-                            isDirectory,
-                            {
-                                sid: shareDetailsResponse.sid
-                            }
-                        );
-                        if (typeof deleteResponse === "string")
-                        {
-                            Main.Alert(Main.GetErrorMessage(deleteResponse));
-                        }
-                        else
-                        {
-                            this.ShowSharingMenu(path, isDirectory, false);
-                        }
-                        break;
+                    );
+                    if (typeof deleteResponse === "string")
+                    {
+                        Main.Alert(Main.GetErrorMessage(deleteResponse));
+                    }
+                    else
+                    {
+                        this.ShowSharingMenu(path, isDirectory, false);
+                    }
                 }
             }
             else
             {
-                if (this.elements.sharingMenu.sharingTypes.value === "public")
+                if (shareType.value !== EShareType.PRIVATE)
                 {
                     const updateResponse = await this.SaveShareDetails(
                         "add",
                         isDirectory,
                         {
                             path: path,
-                            share_type: this.elements.sharingMenu.subMenus.publicOptions.publicSharingTimeInput.value !== "" ? 1 : 0,
-                            expiry_time: this.elements.sharingMenu.subMenus.publicOptions.publicSharingTimeInput.value !== "" ? new Date(this.elements.sharingMenu.subMenus.publicOptions.publicSharingTimeInput.value).getTime() / 1000 : 0
+                            share_type: shareType.value,
+                            expiry_time: this.elements.sharingMenu.subMenus.sharingTime.input.value != "" ? new Date(this.elements.sharingMenu.subMenus.sharingTime.input.value).getTime() / 1000 : 0,
+                            google_share_users: this.GetGoogleInviteUsersFromUI(true)
                         }
                     );
                     if (typeof updateResponse === "string")
@@ -249,10 +369,26 @@ class Directory
         if (typeof directoryResponse === "string")
         {
             this.elements.loadingMessage.style.display = "none";
-            Main.Alert(Main.GetErrorMessage(directoryResponse));
-            //If the user is trying to load a directory that doesn't exist.
-            //Then go back to the directory they were in before unless they were in the root directory or they were loading from a direct link.
-            if (this.directory.length > 0) { this.LoadDirectory(this.directory.join("/"), false); }
+            if (directoryResponse === EErrorMessages.GOOGLE_AUTHENTICATION_REQUIRED)
+            {
+                if (this.useGAPIFeatures)
+                {
+                    Main.Alert(`${Main.GetErrorMessage(EErrorMessages.GOOGLE_AUTHENTICATION_REQUIRED)}<br>Please go to the account page and press link google account.`);
+                }
+                else
+                {
+                    //This stage shouldnt be reached but is possible.
+                    //If a share in the database gets set to use google and then the api key is removed this state could be reached.
+                    Main.Alert(Main.GetErrorMessage(Main.GOOGLE_CLIENT_ID ? EErrorMessages.UNKNOWN_ERROR : EErrorMessages.GAPI_NOT_CONFIGURED));
+                }
+            }
+            else
+            {
+                Main.Alert(Main.GetErrorMessage(directoryResponse));
+                //If the user is trying to load a directory that doesn't exist.
+                //Then go back to the directory they were in before unless they were in the root directory or they were loading from a direct link.
+                if (this.directory.length > 0) { this.LoadDirectory(this.directory.join("/"), false); }
+            }
             return;
         }
 
@@ -271,11 +407,6 @@ class Directory
         }
         this.firstLoad = false;
 
-        console.log(
-            directoryResponse,
-            directoryResponse.path.length,
-            directoryResponse.sharedPath
-        );
         const isRootDirectory = directoryResponse.path.length === 0 || (directoryResponse.sharedPath && directoryResponse.path.length === 1);
         if (!isRootDirectory)
         {
@@ -430,7 +561,11 @@ class Directory
             data:
             {
                 uid: Main.RetreiveCache("uid"),
-                token: Main.RetreiveCache("token")
+                token: Main.RetreiveCache("token"),
+                ...(
+                    Main.GOOGLE_CLIENT_ID !== null && Main.RetreiveCache("google_user_token") !== undefined ?
+                    { google_user_token: Main.RetreiveCache("google_user_token") } : {}
+                )
             }
         })
         .catch((error: IXHRReject<IServerErrorResponse>) =>
@@ -443,18 +578,20 @@ class Directory
             (directoryResponse.response as IDirectoryResponse);
     }
 
-    private async GetShareDetails(path: string, isDirectory: boolean): Promise<string | IShareStatus>
+    private async GetShareDetails(pathOrID: string, isDirectory: boolean, usingID: boolean): Promise<string | IShareStatus>
     {
+        //I don't need to send the google token here because it won't be used for anything.
         const directoryResponse = await Main.XHR<IShareStatus>(
         {
             url: `${Main.WEB_ROOT}/api/v1/${isDirectory ? "directory" : "file"}/`,
             method: "POST",
             data:
             {
-                method: "get_share",
+                method: usingID ? "get_share_by_id" : "get_share",
                 id: Main.RetreiveCache("uid"),
                 token: Main.RetreiveCache("token"),
-                path: path
+                path: pathOrID,
+                sid: pathOrID
             },
             headers:
             {
@@ -478,8 +615,9 @@ class Directory
         {
             path?: string,
             sid?: string,
-            share_type?: 0 | 1,
-            expiry_time?: number
+            share_type?: EShareType,
+            expiry_time?: number,
+            google_share_users?: string[]
         } = {}
     ): Promise<string | IShareResponse>
     {
@@ -509,7 +647,6 @@ class Directory
             (directoryResponse.response as IShareResponse);
     }
 }
-new Directory();
 
 interface IDirectoryResponse
 {
@@ -523,8 +660,16 @@ interface IShareStatus
 {
     shared: boolean;
     sid?: string;
-    share_type?: string;
+    share_type?: EShareType;
     expiry_time?: string;
+    google_share_users?: string[];
+}
+
+enum EShareType
+{
+    PRIVATE,
+    PUBLIC,
+    GOOGLE_INVITE
 }
 
 interface IShareResponse
@@ -542,3 +687,5 @@ export interface IFile
     width?: number;
     height?: number;
 }
+
+new Directory();

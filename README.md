@@ -61,6 +61,25 @@ php setup.php -configure webserver
 ```
 <img width="480" src="./assets/SetupSection.png">
 
+## Updating
+To update the program, download the latest release from this [repository](https://github.com/kOFReadie/WebFileManager/releases/latest) and place the archived folder named `dist.zip` in the root of the directory where your current install is located.  
+Then run the following command to update the program:
+```sh
+unzip -o dist.zip
+cp -r dist/* ./
+rm -rf dist
+```
+If any configuration or database changes are required there will be a script located in `_updates` that you will need to run named `<old_version>_to_<new_version>.php`.  
+This can be done as seen in the following example:
+```sh
+php _updates/1.0.0_to_1.1.0.php
+```
+You may be prompted to enter some values when running these scripts.  
+If the installation fails then you may need to manually install the updates.  
+Currently there is no easy way to manually update the program as it will require you to read the source code and manually update the files. However in the future I may, if possible, comment the manual steps needed if the script fails.  
+**Note:** It is important that the update scripts are run in the correct order. For example if you are on version `1.0.0` and you want to update to version `2.0.0` and there are update scrips for `1.1.0` and so on then you should run those scripts first. If your old version is newer than the oldest version named on an update script then run the latest update script, for example if your previous version was `1.0.5`, your new version is `2.0.0` and the latest update script you have is `1.0.1_to_2.0.0.php` then you should run this script.  
+**Note:** It is also important that the update scripts are not run more than once as it may cause unexpected behaviour and break the program.
+
 ## Getting started
 ### Getting onto the app
 Once you have installed and set up the program, you should be able to access the page from your webserver.  
@@ -121,9 +140,14 @@ THUMBNAL_ERROR
 INVALID_FILE_TYPE
 SHARE_EXPIRED
 UNKNOWN_ERROR
+GAPI_NOT_CONFIGURED
+GOOGLE_AUTHENTICATION_REQUIRED
 ```
 API V1 supports the following requests:  
 **Documentation is in progress**
 
+## Current version
+1.1.0
+
 ## Contact
-If you have any questions, please contact me on Discord (Readie#6594) or GitHub.
+If you have any questions, please contact me on Discord (Readie#6594) or GitHub. If your inquiry is issue or feature related, please create an issue on GitHub.

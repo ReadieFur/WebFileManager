@@ -7,3 +7,6 @@ src/_storage
 *.map
 *.js
 *.css
+src/@types/gapi.auth2.d.ts
+*.lock
+src/node_modules

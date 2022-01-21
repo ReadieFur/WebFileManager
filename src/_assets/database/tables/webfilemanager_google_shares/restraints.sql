@@ -1,0 +1,1 @@
+ALTER TABLE `webfilemanager_google_shares` ADD FOREIGN KEY (`sid`) REFERENCES `webfilemanager_shares`(`id`);
